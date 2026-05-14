@@ -1505,11 +1505,16 @@ function gdhParaISO(gdh) {
 function extrairPeriodo(texto) {
   const txt = texto.replace(/\n/g,' ');
 
-  // 1) GDH par: "09000ABR26 a 101730ABR26"
+  // 1) GDH par: "261500ABR26 a 301100ABR26"
   let m = txt.match(/(\d{2}\d{0,4}[A-Z]{3}\d{2})\s+a\s+(\d{2}\d{0,4}[A-Z]{3}\d{2})/i);
   if (m) {
     const ini = gdhParaISO(m[1]); const fim = gdhParaISO(m[2]);
-    if (ini && fim) return { ini, fim, fonte: 'GDH' };
+    if (ini && fim) {
+      // Extrai horários do GDH (ex: "261500ABR26" → "1500", "09000ABR26" → "0900")
+      const tIni = m[1].replace(/[A-Za-z]{3}\d{2}$/, '').slice(2).padEnd(4,'0').slice(0,4);
+      const tFim = m[2].replace(/[A-Za-z]{3}\d{2}$/, '').slice(2).padEnd(4,'0').slice(0,4);
+      return { ini, fim, fonte: 'GDH', horaIni: tIni, horaFim: tFim };
+    }
   }
 
   // 2) BI: "em 090500ABR26" ... "retornou em 101730ABR26"
@@ -1543,6 +1548,31 @@ function extrairPeriodo(texto) {
   }
 
   return null;
+}
+
+// ── ANÁLISE GDH (contagem de dias por dia civil ≥ 8h) ──────────────
+
+function calcularDiasGDH(ini, fim, horaIniStr, horaFimStr) {
+  const dtI = new Date(ini + 'T12:00:00'); // noon para evitar DST
+  const dtF = new Date(fim + 'T12:00:00');
+  const hi  = parseInt(horaIniStr.slice(0,2)) + parseInt(horaIniStr.slice(2))/60;
+  const hf  = parseInt(horaFimStr.slice(0,2)) + parseInt(horaFimStr.slice(2))/60;
+  let count = 0;
+  const detalhes = [];
+  let cur = new Date(dtI);
+  while (cur <= dtF) {
+    const isFirst = cur.toDateString() === dtI.toDateString();
+    const isLast  = cur.toDateString() === dtF.toDateString();
+    const horas   = (isFirst && isLast) ? hf - hi
+                  : isFirst ? 24 - hi
+                  : isLast  ? hf : 24;
+    const ok = horas >= 8;
+    if (ok) count++;
+    const d = cur.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    detalhes.push(`${d}: ${horas.toFixed(1)}h${ok ? ' ✓' : ' ✗'}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { count, detalhes };
 }
 
 // ── OCR ENGINE ─────────────────────────────────────────────────────
@@ -1654,6 +1684,7 @@ function analisarTexto(texto) {
   let fim   = document.getElementById('ocr-fim').value;
   const horas = parseFloat(document.getElementById('ocr-horas').value) || 10;
   let periodoFonte = null;
+  let gdhHoras = null;
 
   if (!ini || !fim) {
     const p = extrairPeriodo(texto);
@@ -1661,10 +1692,20 @@ function analisarTexto(texto) {
       ini = p.ini;
       fim = p.fim;
       periodoFonte = p.fonte;
+      if (p.horaIni && p.horaFim) gdhHoras = { ini: p.horaIni, fim: p.horaFim };
       document.getElementById('ocr-ini').value = ini;
       document.getElementById('ocr-fim').value = fim;
     }
   }
+
+  // Extrai TOTAL DIAS declarado no documento
+  const totalDiasDocM = texto.match(/TOTAL\s*DIAS[:\s]+(\d+)/i)
+    || texto.match(/\d{2}\d{0,4}[A-Z]{3}\d{2}\s+a\s+\d{2}\d{0,4}[A-Z]{3}\d{2}\s+(\d+)/i);
+  const diasDocumento = totalDiasDocM ? parseInt(totalDiasDocM[1]) : null;
+
+  // Análise GDH hora a hora (quando horários disponíveis)
+  const gdhAnalise = (gdhHoras && ini && fim)
+    ? calcularDiasGDH(ini, fim, gdhHoras.ini, gdhHoras.fim) : null;
 
   const dIni  = ini ? new Date(ini) : null;
   const dFim  = fim ? new Date(fim) : null;
@@ -1720,15 +1761,41 @@ function analisarTexto(texto) {
     {
       ok: dias > 0,
       txt: dias > 0
-        ? `Período detectado automaticamente: ${ini ? ini.split('-').reverse().join('/') : '?'} a ${fim ? fim.split('-').reverse().join('/') : '?'} (${dias} dia(s))${periodoFonte ? ' — fonte: ' + periodoFonte : ''}`
+        ? `Período detectado: ${ini ? ini.split('-').reverse().join('/') : '?'} a ${fim ? fim.split('-').reverse().join('/') : '?'}${gdhHoras ? ` — GDH: ${gdhHoras.ini.slice(0,2)}:${gdhHoras.ini.slice(2)}h a ${gdhHoras.fim.slice(0,2)}:${gdhHoras.fim.slice(2)}h` : ''}`
         : 'Período NÃO detectado no documento — não foi possível calcular o valor da GR',
       lei: 'Decreto 11.002/22, art. 4º, §1º'
     },
-    {
-      ok: horas >= 8,
-      txt: `Carga horária considerada: ${horas}h/dia — ${horas >= 8 ? 'atende ao mínimo de 8h por dia' : 'INSUFICIENTE — mínimo é 8h para cômputo de 1 dia'}`,
-      lei: 'Decreto 11.002/22, art. 4º, §1º'
-    },
+    (() => {
+      if (gdhAnalise) {
+        const diasOk  = gdhAnalise.count;
+        const docOk   = diasDocumento;
+        const diverge = docOk !== null && docOk !== diasOk;
+        return {
+          ok: diverge ? false : true,
+          txt: `Análise GDH por dia civil (≥ 8h = 1 dia): ${diasOk} dia(s) válido(s)\n`
+             + gdhAnalise.detalhes.join('  |  ')
+             + (diverge
+                ? `\n⚠ DIVERGÊNCIA: documento registra ${docOk} dia(s), cálculo correto é ${diasOk} dia(s) — diferença de ${Math.abs(docOk - diasOk)} dia(s)`
+                : docOk !== null ? `\nConforme documento (${docOk} dias)` : ''),
+          lei: 'Decreto 11.002/22, art. 4º, §1º — dia civil com ≥ 8h'
+        };
+      }
+      if (diasDocumento !== null) {
+        const diverge = diasDocumento !== dias;
+        return {
+          ok: diverge ? false : true,
+          txt: diverge
+            ? `DIVERGÊNCIA de dias: documento indica ${diasDocumento} dia(s), sistema calculou ${dias} dia(s) — verificar período GDH`
+            : `Total de dias conforme documento: ${diasDocumento} dia(s)`,
+          lei: 'Decreto 11.002/22, art. 4º, §1º'
+        };
+      }
+      return {
+        ok: horas >= 8 ? true : false,
+        txt: `Carga horária: ${horas}h/dia — ${horas >= 8 ? 'atende ao mínimo de 8h' : 'INSUFICIENTE — mínimo 8h por dia civil'}`,
+        lei: 'Decreto 11.002/22, art. 4º, §1º'
+      };
+    })(),
     {
       ok: eventoDetectado ? true : null,
       txt: eventoDetectado
