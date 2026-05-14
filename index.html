@@ -1600,7 +1600,9 @@ async function handleFile(file) {
   ocrProgress('Lendo arquivo...', 5, file.name);
 
   try {
-    let texto = '';
+    // textoQSGR = páginas escaneadas (tabela QSGR — fonte dos militares)
+    // textoBI   = páginas digitais (BI/boletim — fonte de datas e referências)
+    let textoQSGR = '', textoBI = '';
 
     if (file.type === 'application/pdf') {
       if (typeof pdfjsLib === 'undefined') {
@@ -1633,9 +1635,10 @@ async function handleFile(file) {
           .join('\n');
 
         if (camada.length > 40) {
-          texto += camada + '\n';
+          // Página digital → vai para textoBI (BI/boletim)
+          textoBI += camada + '\n';
         } else {
-          // Página escaneada → renderiza e faz OCR
+          // Página escaneada → OCR → vai para textoQSGR (tabela QSGR)
           ocrProgress(`OCR — página ${i} / ${pdf.numPages}`, basePct + 5,
             'Reconhecendo texto (pode levar alguns segundos)...');
           const scale = 2.2;
@@ -1650,18 +1653,21 @@ async function handleFile(file) {
               ocrProgress(`OCR — página ${i} / ${pdf.numPages}`,
                 basePct + Math.round(m.progress * 30), 'Reconhecendo...'); }
           });
-          texto += text + '\n';
+          textoQSGR += text + '\n';
         }
       }
     } else {
-      // Imagem direta
+      // Imagem direta → tudo é QSGR
       ocrProgress('Reconhecendo texto na imagem...', 20, file.name);
       const { data: { text } } = await Tesseract.recognize(file, 'por', {
         logger: m => { if (m.status === 'recognizing text')
           ocrProgress('OCR em andamento...', 10 + Math.round(m.progress * 85), ''); }
       });
-      texto = text;
+      textoQSGR = text;
     }
+
+    // Combina com separador explícito: QSGR primeiro, BI depois
+    const texto = (textoQSGR.trim() ? textoQSGR + '\n<<INICIO_BI>>\n' : '') + textoBI;
 
     ocrProgress('Analisando dados extraídos...', 98, '');
     document.getElementById('dash-paste').value = texto.trim();
@@ -1717,12 +1723,22 @@ function analisarTexto(texto) {
   const locM  = texto.match(/\b([A-ZÁÉÍÓÚ][a-záéíóú]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/);
   const totM  = texto.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
 
+  // ── Isolar seção QSGR para extração de nomes ─────────────────
+  // Usa apenas o texto das páginas escaneadas (tabela QSGR).
+  // Para PDFs totalmente digitais, trunca no início do BI/boletim.
+  const sepBI = texto.indexOf('<<INICIO_BI>>');
+  let textoNomes;
+  if (sepBI > 0) {
+    textoNomes = texto.substring(0, sepBI);
+  } else {
+    // Fallback: PDF totalmente digital → corta antes do BI
+    const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
+    textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;
+  }
+
   // ── Extrair pessoas ──────────────────────────────────────────
-  // Estratégia: o posto pode estar em qualquer posição da linha
-  // (QSGR: "5ºRCC 1 PONTA GROSSA PR Cap LUCAS RODRIGUES ALVES 09000ABR26 ...")
-  // O nome é tudo após o posto até o primeiro dígito ou fim de linha.
   const pessoas = [];
-  for (const linha of texto.split(/\r?\n/)) {
+  for (const linha of textoNomes.split(/\r?\n/)) {
     const l = linha.trim();
     if (l.length < 5) continue;
     for (const [pat, key] of RANK_PATTERNS) {
