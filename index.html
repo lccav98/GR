@@ -1723,17 +1723,30 @@ function analisarTexto(texto) {
   const locM  = texto.match(/\b([A-ZÁÉÍÓÚ][a-záéíóú]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/);
   const totM  = texto.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
 
-  // ── Isolar seção QSGR para extração de nomes ─────────────────
-  // Usa apenas o texto das páginas escaneadas (tabela QSGR).
-  // Para PDFs totalmente digitais, trunca no início do BI/boletim.
+  // ── Isolar seção da tabela QSGR para extração de nomes ───────
+  // Estratégia em camadas:
+  // 1) Separador explícito <<INICIO_BI>> (PDFs com pgs escaneadas + digitais)
+  // 2) Limites pelo conteúdo: "QUADRO DE SOLICITAÇÃO" → "TOTAL R$ x"
+  // 3) Marcador do BI: "(Continuação do BI" ou "Em consequência"
   const sepBI = texto.indexOf('<<INICIO_BI>>');
   let textoNomes;
+
   if (sepBI > 0) {
+    // Caso ideal: páginas QSGR (OCR) separadas das páginas BI (digitais)
     textoNomes = texto.substring(0, sepBI);
   } else {
-    // Fallback: PDF totalmente digital → corta antes do BI
-    const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
-    textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;
+    // Tenta delimitar pela tabela QSGR
+    const inicioQSGR = texto.search(/QUADRO\s+DE\s+SOLICITA[ÇC][AÃO]O|QSGR\s+\d+[\/\\]\d+/i);
+    const fimQSGR    = texto.search(/\bTOTAL\b[\s:]+R\$\s*[\d.,]+/i);
+
+    if (inicioQSGR >= 0 && fimQSGR > inicioQSGR) {
+      // Extrai somente o interior da tabela
+      textoNomes = texto.substring(inicioQSGR, fimQSGR + 80);
+    } else {
+      // Fallback: corta no início do BI
+      const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
+      textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;
+    }
   }
 
   // ── Extrair pessoas ──────────────────────────────────────────
