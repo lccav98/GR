@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGR — Sistema de Gratificação de Representação | EB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root {
+    --verde: #0a3d2e; --verde-m: #0f5c43; --verde-l: #1d9e75; --verde-xl: #e1f5ee;
+    --ouro: #b8921e; --ouro-l: #f5e6bb;
+    --cinza-0: #f5f5f3; --cinza-1: #e8e8e4; --cinza-2: #b4b2a9; --cinza-3: #5f5e5a;
+    --vermelho: #a32d2d; --vermelho-l: #fcebeb;
+    --amarelo: #854f0b; --amarelo-l: #faeeda;
+    --azul: #185fa5; --azul-l: #e6f1fb;
+    --branco: #fff; --fundo: #f8f7f4;
+    --sombra: 0 1px 3px rgba(0,0,0,.08);
+    --r: 8px; --rl: 12px;
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--fundo); color: #1a1a18; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--verde); color: #fff; padding: 0; }
+  .header-inner { max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-badge { width: 40px; height: 40px; background: var(--ouro); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .logo-text { }
+  .logo-title { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+  .logo-sub { font-size: 10px; color: rgba(255,255,255,.6); margin-top: 1px; line-height: 1.4; }
+  .header-lei { font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,.45); text-align: right; line-height: 1.8; }
+
+  /* NAV */
+  .nav-bar { background: var(--branco); border-bottom: 1px solid var(--cinza-1); position: sticky; top: 0; z-index: 100; }
+  .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; gap: 4px; }
+  .nav-btn { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 12px 16px; font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--cinza-3); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .nav-btn:hover { color: var(--verde); }
+  .nav-btn.on { color: var(--verde); border-bottom-color: var(--verde-l); }
+
+  /* MAIN */
+  .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .sec { display: none; }
+  .sec.on { display: block; }
+
+  /* MÉTRICAS */
+  .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
+  .metric { background: var(--branco); border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 14px; }
+  .metric-label { font-size: 11px; color: var(--cinza-3); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .metric-value { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+  .mv-ok { color: var(--verde-l); }
+  .mv-warn { color: var(--ouro); }
+  .mv-err { color: var(--vermelho); }
+  .mv-base { color: var(--verde); }
+
+  /* GRID 2COL */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .g3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+  /* CARD */
+  .card { background: var(--branco); border: 1px solid var(--cinza-1); border-radius: var(--rl); padding: 18px 20px; margin-bottom: 16px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--verde); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; width: 3px; height: 14px; background: var(--verde-l); border-radius: 2px; flex-shrink: 0; }
+
+  /* TABELA */
+  .tbl-wrap { overflow-x: auto; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data th { text-align: left; font-size: 11px; font-weight: 600; color: var(--cinza-3); text-transform: uppercase; letter-spacing: .5px; padding: 8px 12px; background: var(--cinza-0); border-bottom: 1px solid var(--cinza-1); }
+  table.data td { padding: 9px 12px; border-bottom: 1px solid var(--cinza-1); color: #1a1a18; vertical-align: middle; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data tr:hover td { background: var(--cinza-0); }
+
+  /* BADGES */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: var(--mono); }
+  .b-ok { background: var(--verde-xl); color: var(--verde-m); }
+  .b-warn { background: var(--amarelo-l); color: var(--amarelo); }
+  .b-err { background: var(--vermelho-l); color: var(--vermelho); }
+  .b-info { background: var(--azul-l); color: var(--azul); }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fg { display: flex; flex-direction: column; gap: 4px; }
+  .fg label { font-size: 11px; font-weight: 600; color: var(--cinza-3); text-transform: uppercase; letter-spacing: .4px; }
+  .fg input, .fg select { border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 8px 10px; font-family: var(--font); font-size: 13px; color: #1a1a18; background: var(--branco); transition: border-color .15s; }
+  .fg input:focus, .fg select:focus { outline: none; border-color: var(--verde-l); box-shadow: 0 0 0 3px rgba(29,158,117,.12); }
+  .fg.w2 { grid-column: 1 / -1; }
+  .btn-p { background: var(--verde); color: #fff; border: none; border-radius: var(--r); padding: 10px 22px; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 14px; transition: background .15s; }
+  .btn-p:hover { background: var(--verde-m); }
+  .btn-s { background: transparent; color: var(--cinza-3); border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 10px 18px; font-family: var(--font); font-size: 13px; cursor: pointer; margin-top: 14px; margin-left: 8px; transition: all .15s; }
+  .btn-s:hover { border-color: var(--cinza-2); color: #1a1a18; }
+  .nota-legal { background: var(--azul-l); border-left: 3px solid var(--azul); border-radius: 0 var(--r) var(--r) 0; padding: 10px 14px; font-size: 12px; color: #1a3a5c; margin-bottom: 16px; line-height: 1.6; }
+
+  /* AUTOCOMPLETE */
+  .ac-wrap { position: relative; }
+  .ac-box { position: absolute; left: 0; right: 0; background: var(--branco); border: 1px solid var(--verde-l); border-radius: var(--r); max-height: 200px; overflow-y: auto; z-index: 200; display: none; box-shadow: var(--sombra); }
+  .ac-item { padding: 8px 12px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--cinza-0); color: #1a1a18; }
+  .ac-item:hover { background: var(--verde-xl); color: var(--verde); }
+  .ac-item:last-child { border-bottom: none; }
+
+  /* PARECER */
+  .parecer { border-radius: var(--rl); padding: 18px 20px; margin-top: 16px; }
+  .par-aprov { background: var(--verde-xl); border: 1px solid var(--verde-l); }
+  .par-reprov { background: var(--vermelho-l); border: 1px solid #f09595; }
+  .par-pend { background: var(--amarelo-l); border: 1px solid #fac775; }
+  .par-title { font-size: 14px; font-weight: 700; letter-spacing: .3px; margin-bottom: 6px; font-family: var(--mono); }
+  .par-aprov .par-title { color: var(--verde); }
+  .par-reprov .par-title { color: var(--vermelho); }
+  .par-pend .par-title { color: var(--amarelo); }
+  .par-sub { font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+  .par-aprov .par-sub { color: var(--verde-m); }
+  .par-reprov .par-sub { color: #7a1f1f; }
+  .par-pend .par-sub { color: var(--amarelo); }
+  .chk-list { list-style: none; }
+  .chk-list li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 12px; color: #1a1a18; align-items: flex-start; }
+  .chk-list li:last-child { border-bottom: none; }
+  .chk-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .ic-ok { background: var(--verde-l); color: #fff; }
+  .ic-err { background: var(--vermelho); color: #fff; }
+  .ic-warn { background: var(--ouro); color: #fff; }
+  .chk-lei { font-size: 10px; font-family: var(--mono); color: var(--cinza-3); display: block; margin-top: 2px; }
+  .calc-box { background: rgba(255,255,255,.6); border-radius: var(--r); padding: 12px; margin-top: 12px; }
+  .calc-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .calc-row:last-child { border-bottom: none; font-weight: 700; font-size: 14px; color: var(--verde); }
+  .calc-row span:first-child { color: var(--cinza-3); }
+
+  /* BARRAS */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 11px; }
+  .bar-label { width: 120px; color: var(--cinza-3); text-align: right; flex-shrink: 0; font-size: 10px; font-weight: 500; }
+  .bar-track { flex: 1; background: var(--cinza-0); border-radius: 99px; height: 16px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 700; color: #fff; }
+
+  /* EVENTOS */
+  .ev-search { width: 100%; border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 8px 12px; font-family: var(--font); font-size: 13px; margin-bottom: 10px; }
+  .ev-search:focus { outline: none; border-color: var(--verde-l); }
+  .ev-list { max-height: 380px; overflow-y: auto; border: 1px solid var(--cinza-1); border-radius: var(--r); }
+  .ev-item { padding: 8px 14px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--cinza-0); display: flex; align-items: center; gap: 8px; }
+  .ev-item:hover { background: var(--verde-xl); color: var(--verde); }
+  .ev-item.sel { background: var(--verde-xl); color: var(--verde); font-weight: 600; }
+  .ev-item:last-child { border-bottom: none; }
+  .ev-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--verde-l); flex-shrink: 0; }
+
+  /* SIMULADOR */
+  .valor-destaque { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--verde); text-align: center; padding: 14px 0; }
+  .formula { font-family: var(--mono); font-size: 11px; color: var(--cinza-3); text-align: center; }
+
+  /* FILTRAGEM */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-row select, .filter-row input { border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 7px 10px; font-family: var(--font); font-size: 13px; background: var(--branco); }
+  .filter-row input { flex: 1; }
+
+  /* LEG ITEMS */
+  .leg-bloco { border-left: 3px solid var(--verde-l); padding: 12px 16px; margin-bottom: 12px; background: var(--branco); border-radius: 0 var(--r) var(--r) 0; }
+  .leg-titulo { font-weight: 700; font-size: 13px; color: var(--verde); margin-bottom: 5px; font-family: var(--mono); }
+  .leg-corpo { font-size: 12px; color: var(--cinza-3); line-height: 1.7; }
+  .ver-btn { background: transparent; border: 1px solid var(--cinza-1); border-radius: var(--r); padding: 4px 12px; font-family: var(--font); font-size: 11px; cursor: pointer; color: var(--cinza-3); float: right; }
+  .ver-btn:hover { background: var(--cinza-0); }
+
+  /* DROP ZONE */
+  .drop-zone { border: 2px dashed var(--cinza-1); border-radius: var(--rl); padding: 28px 20px; text-align: center; cursor: pointer; transition: all .2s; background: var(--fundo); }
+  .drop-zone:hover, .drop-zone.over { border-color: var(--verde-l); background: var(--verde-xl); }
+  .drop-icon { font-size: 40px; margin-bottom: 10px; line-height: 1; }
+  .drop-text { font-weight: 600; font-size: 15px; color: var(--verde); margin-bottom: 4px; }
+  .drop-sub { font-size: 11px; color: var(--cinza-3); }
+  .ocr-prog { background: var(--branco); border: 1px solid var(--cinza-1); border-radius: var(--rl); padding: 16px 20px; margin-top: 12px; display: none; }
+  .ocr-prog-lbl { font-size: 12px; font-weight: 600; color: var(--verde); margin-bottom: 6px; }
+  .ocr-track { height: 8px; background: var(--cinza-0); border-radius: 99px; overflow: hidden; }
+  .ocr-fill { height: 100%; background: var(--verde-l); border-radius: 99px; transition: width .4s; width: 0%; }
+  .ocr-detail { font-size: 10px; color: var(--cinza-3); margin-top: 4px; font-family: var(--mono); }
+  .res-header { padding: 14px 18px 8px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--cinza-1); }
+
+  /* RESPONSIVO */
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: 1fr 1fr 1fr; }
+    .g2, .g3, .form-grid { grid-template-columns: 1fr; }
+    .fg.w2 { grid-column: 1; }
+    .header-lei { display: none; }
+    .main { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-badge">SGR</div>
+      <div class="logo-text">
+        <div class="logo-title">Sistema de Gratificação de Representação</div>
+        <div class="logo-sub">Exército Brasileiro — Motor de Conformidade Legislativa</div>
+      </div>
+    </div>
+    <div class="header-lei">
+      Lei nº 13.954/2019 · Decreto nº 11.002/2022<br>
+      Port C Ex nº 1887/2022 · OS nº 13-E4/CMS<br>
+      Adt Adm CMS nº 06 e 07/2026 · Tabela Soldos Jan/2026
+    </div>
+  </div>
+</div>
+
+<nav class="nav-bar">
+  <div class="nav-inner">
+    <button class="nav-btn on" onclick="showS('dash')">▣ Dashboard</button>
+    <button class="nav-btn" onclick="showS('qsgr')">⊞ QSGR</button>
+    <button class="nav-btn" onclick="showS('eventos')">◈ Eventos autorizados</button>
+    <button class="nav-btn" onclick="showS('legislacao')">§ Legislação</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="sec on" id="s-dash">
+  <div class="metrics" id="dash-metrics"></div>
+
+  <div class="g3">
+    <!-- COL PRINCIPAL: OCR -->
+    <div>
+      <div class="card">
+        <div class="card-title">Análise por leitura de documento (OCR)</div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="drop-zone"
+             ondragover="event.preventDefault();this.classList.add('over')"
+             ondragleave="this.classList.remove('over')"
+             ondrop="this.classList.remove('over');handleFile(event.dataTransfer.files[0])"
+             onclick="document.getElementById('ocr-file').click()">
+          <div class="drop-icon">📄</div>
+          <div class="drop-text">Arraste um QSGR aqui</div>
+          <div class="drop-sub">PDF ou imagem (JPEG, PNG) — ou clique para selecionar</div>
+          <input type="file" id="ocr-file" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="handleFile(this.files[0])">
+        </div>
+
+        <!-- Barra de progresso -->
+        <div class="ocr-prog" id="ocr-prog">
+          <div class="ocr-prog-lbl" id="ocr-lbl">Iniciando...</div>
+          <div class="ocr-track"><div class="ocr-fill" id="ocr-fill"></div></div>
+          <div class="ocr-detail" id="ocr-det"></div>
+        </div>
+
+        <!-- Divisor / Cole texto -->
+        <div style="margin-top:14px">
+          <div style="font-size:11px;color:var(--cinza-3);margin-bottom:6px;text-align:center">— ou cole o texto extraído do documento —</div>
+          <textarea id="dash-paste" rows="3" style="width:100%;border:1px solid var(--cinza-1);border-radius:var(--r);padding:8px 10px;font-family:var(--mono);font-size:11px;resize:vertical;color:#1a1a18" placeholder="Cole aqui o texto copiado do PDF (ou resultado de OCR externo)..."></textarea>
+          <input type="hidden" id="ocr-ini">
+          <input type="hidden" id="ocr-fim">
+          <input type="hidden" id="ocr-horas" value="10">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn-p" style="margin:0;padding:7px 18px" onclick="analisarTexto(document.getElementById('dash-paste').value)">▶ Analisar</button>
+            <button class="btn-s" style="margin:0;padding:7px 14px" onclick="limparOCR()">Limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultado OCR -->
+      <div id="ocr-result-wrap" style="display:none">
+        <div class="card" style="padding:0">
+          <div class="res-header">
+            <div>
+              <div class="card-title" style="margin:0" id="ocr-res-titulo">Resultado</div>
+              <div style="font-size:11px;color:var(--cinza-3);margin-top:3px" id="ocr-res-meta"></div>
+            </div>
+            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--verde)" id="ocr-res-total"></div>
+              <div style="font-size:10px;color:var(--cinza-3)" id="ocr-res-subtotal"></div>
+              <button class="btn-p" style="margin:0;padding:7px 16px;font-size:12px" onclick="gerarParecer('ocr')">📄 Gerar Parecer PDF</button>
+            </div>
+          </div>
+          <div id="ocr-criterios" style="padding:12px 18px;border-bottom:1px solid var(--cinza-1);display:none"></div>
+          <div class="tbl-wrap">
+            <table class="data">
+              <thead><tr><th>P/G</th><th>Nome</th><th>Soldo</th><th>Dias</th><th>GR/dia</th><th>Total</th><th>Status</th></tr></thead>
+              <tbody id="ocr-res-body"></tbody>
+            </table>
+          </div>
+          <div id="ocr-res-aviso" style="display:none;padding:10px 16px;background:var(--amarelo-l);border-top:1px solid var(--cinza-1);font-size:12px;color:var(--amarelo)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL LATERAL: Referência -->
+    <div>
+      <div class="card">
+        <div class="card-title">Conformidade por critério legal</div>
+        <div id="dash-bars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">GR diária — referência</div>
+        <div id="dash-soldos"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ANÁLISE (removida — processamento automático via OCR no Dashboard) -->
+<div class="sec" id="s-analise" style="display:none!important">
+  <div class="card"><div class="form-grid">
+      <div class="fg"><label>OM (Organização Militar)</label><input type="text" id="f-om" placeholder="Ex: 5º RCC"></div>
+      <div class="fg"><label>Nº QSGR / Referência</label><input type="text" id="f-qsgr" placeholder="Ex: QSGR 36/2026"></div>
+      <div class="fg"><label>Local / Município</label><input type="text" id="f-local" placeholder="Ex: Ponta Grossa/PR"></div>
+      <div class="fg"><label>Descrição do Evento</label><input type="text" id="f-descricao" placeholder="Ex: Treinamento formatura Passagem de Comando 5ª Bda C Bld"></div>
+      <div class="fg"><label>Nome completo</label><input type="text" id="f-nome" placeholder="Ex: Maj JOSE DA SILVA"></div>
+      <div class="fg"><label>NIP</label><input type="text" id="f-nip" placeholder="123456789"></div>
+      <div class="fg"><label>Posto / Graduação</label>
+        <select id="f-posto" onchange="autoSoldo()">
+          <option value="">— selecione —</option>
+          <optgroup label="Oficiais-Generais">
+            <option value="Mar">Marechal</option>
+            <option value="Gen Ex">General de Exército</option>
+            <option value="Gen Div">General de Divisão</option>
+            <option value="Gen Bda">General de Brigada</option>
+          </optgroup>
+          <optgroup label="Oficiais Superiores / Subalternos">
+            <option value="Cel">Coronel</option>
+            <option value="Ten Cel">Tenente-Coronel</option>
+            <option value="Maj">Major</option>
+            <option value="Cap">Capitão</option>
+            <option value="1 Ten">1º Tenente</option>
+            <option value="2 Ten">2º Tenente</option>
+            <option value="Asp Of">Aspirante a Oficial</option>
+          </optgroup>
+          <optgroup label="Praças">
+            <option value="Sub Ten">Subtenente</option>
+            <option value="1 Sgt">1º Sargento</option>
+            <option value="2 Sgt">2º Sargento</option>
+            <option value="3 Sgt">3º Sargento</option>
+            <option value="Cb">Cabo (Eng)</option>
+            <option value="Cb EV">Cabo EV / N.Eng</option>
+            <option value="Sd EP">Soldado EP / Eng</option>
+            <option value="Sd Pqdt">Soldado Pqdt</option>
+            <option value="Sd EV">Soldado EV</option>
+          </optgroup>
+          <optgroup label="Alunos / Aspirantes-Candidatos">
+            <option value="Asp-Cad/Al IME Ult">Asp-Cad / Al IME (ult. ano)</option>
+            <option value="Asp-Cad outros">Asp-Cad demais anos</option>
+            <option value="Al CPOR">Al CPOR</option>
+            <option value="Al EsSA">Al EsSA</option>
+            <option value="EsPCEx Ult">EsPCEx (ult. ano)</option>
+            <option value="Al EsPCEx">Al EsPCEx demais anos</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="fg"><label>Soldo mensal vigente (R$)</label><input type="number" id="f-soldo" placeholder="Preenchido automaticamente"></div>
+      <div class="fg"><label>Data início da atividade</label><input type="date" id="f-inicio"></div>
+      <div class="fg"><label>Data fim da atividade</label><input type="date" id="f-fim"></div>
+      <div class="fg"><label>Horas de atividade por dia</label><input type="number" id="f-horas" placeholder="Mínimo 8h" min="1" max="24"></div>
+      <div class="fg"><label>Tipo de evento (Decreto 11.002, art. 4º)</label>
+        <select id="f-tipo">
+          <option value="">— selecione —</option>
+          <option value="vr">Viagem de Representação (art. 5º, I)</option>
+          <option value="vi">Viagem de Instrução (art. 5º, II)</option>
+          <option value="eo">Emprego Operacional (art. 5º, III)</option>
+        </select>
+      </div>
+      <div class="fg w2 ac-wrap">
+        <label>Atividade / Evento (OS 13-E4/CMS, An A)</label>
+        <input type="text" id="f-atividade" placeholder="Digite para buscar nos eventos pré-autorizados do CMS..." oninput="buscarAc(this.value)" autocomplete="off">
+        <div class="ac-box" id="ac-box"></div>
+      </div>
+      <div class="fg"><label>Atividade fora da sede?</label>
+        <select id="f-fora">
+          <option value="sim">Sim — fora dos limites políticos do município da OM</option>
+          <option value="nao">Não — dentro da sede</option>
+        </select>
+      </div>
+      <div class="fg"><label>Autorização publicada em Adt Adm / Bol CMS?</label>
+        <select id="f-autor">
+          <option value="sim">Sim — publicada</option>
+          <option value="nao">Não / não localizada</option>
+        </select>
+      </div>
+      <div class="fg"><label>Referência do Adt Adm / Boletim CMS</label>
+        <input type="text" id="f-bol" placeholder="Ex: Adt Adm nº 06 ao Bol CMS nº 11, 18 MAR 26"></div>
+      <div class="fg"><label>BI da OM publicado após o evento? (EB10-N-08.003, art. 5º)</label>
+        <select id="f-bi">
+          <option value="sim">Sim — publicado com todos os dados exigidos</option>
+          <option value="nao">Não / pendente</option>
+        </select>
+      </div>
+      <div class="fg"><label>GR acumulada com diárias? (Vedado — art. 8º)</label>
+        <select id="f-diaria">
+          <option value="nao">Não — não há cumulatividade</option>
+          <option value="sim">Sim (vedado pela legislação)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Situação do militar</label>
+        <select id="f-ativo">
+          <option value="sim">Militar da ativa</option>
+          <option value="nao">PTTC / militar inativo (não faz jus)</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <button class="btn-p" onclick="analisar()">▶ Verificar conformidade</button>
+      <button class="btn-s" onclick="limpar()">Limpar</button>
+      <button class="btn-s" onclick="showS('eventos')">Ver eventos autorizados</button>
+    </div>
+  </div>
+
+  <div id="parecer-area"></div>
+</div>
+
+<!-- IMPORTAR QSGR -->
+<div class="sec" id="s-qsgr">
+  <div class="nota-legal">
+    <strong>QSGR — Quadro de Solicitação de GR (pré-autorizado pelo CMS).</strong>
+    Preencha o cabeçalho e a relação de militares. O sistema calcula GR/dia e total automaticamente e valida cada pessoa. Para PDFs escaneados, cole o texto extraído via OCR no campo abaixo.
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cabeçalho do QSGR</div>
+    <div class="form-grid">
+      <div class="fg"><label>Nº QSGR</label><input type="text" id="q-nr" placeholder="36/2026"></div>
+      <div class="fg"><label>OM</label><input type="text" id="q-om" placeholder="5º RCC"></div>
+      <div class="fg"><label>Tipo de Evento</label>
+        <select id="q-tipo">
+          <option value="vi">Viagem de Instrução (art. 5º, II)</option>
+          <option value="vr">Viagem de Representação (art. 5º, I)</option>
+          <option value="eo">Emprego Operacional (art. 5º, III)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Local / Município</label><input type="text" id="q-local" placeholder="Ponta Grossa/PR"></div>
+      <div class="fg"><label>Data início (GDH)</label><input type="date" id="q-ini"></div>
+      <div class="fg"><label>Data fim (GDH)</label><input type="date" id="q-fim"></div>
+      <div class="fg w2"><label>Descrição do Evento</label><input type="text" id="q-desc" placeholder="Ex: Viagem de Instrução: Treinamento formatura Passagem de Comando da 5ª Bda C Bld."></div>
+      <div class="fg"><label>Amparo legal</label><input type="text" id="q-amparo" placeholder="letra F do nº 2, Anexo A, OS 13-D17/CMS e Art. 5º, Decreto 11.002/22"></div>
+      <div class="fg"><label>Pré-Autorização (Adt Adm)</label><input type="text" id="q-preaut" placeholder="Adt Adm nº06 ao Bol CMS nº11, 18 MAR 2026"></div>
+      <div class="fg"><label>BI da OM publicado?</label>
+        <select id="q-bi"><option value="sim">Sim</option><option value="nao">Não / pendente</option></select>
+      </div>
+      <div class="fg"><label>Horas de atividade por dia</label><input type="number" id="q-horas" value="10" min="1" max="24" oninput="qRecalcAll()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Colar texto de PDF / OCR <span style="font-weight:400;color:var(--cinza-3);text-transform:none;font-size:11px;margin-left:8px">(opcional — sistema tentará extrair pessoas automaticamente)</span></div>
+    <textarea id="q-ocr" rows="4" style="width:100%;border:1px solid var(--cinza-1);border-radius:var(--r);padding:8px 10px;font-family:var(--mono);font-size:11px;resize:vertical" placeholder="Cole aqui o texto extraído do QSGR (OCR ou cópia de PDF digital)..."></textarea>
+    <button class="btn-s" style="margin-top:8px" onclick="qParseOCR()">↳ Extrair pessoas do texto</button>
+  </div>
+
+  <div class="card" style="padding:0">
+    <div style="padding:14px 18px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title" style="margin:0">Relação de militares</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-s" style="margin:0" onclick="qAddRow()">+ Adicionar linha</button>
+        <button class="btn-p" style="margin:0" onclick="qProcessAll()">▶ Calcular e validar</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="data" id="q-tbl">
+        <thead><tr>
+          <th>P/G</th><th>Nome</th><th>NIP</th>
+          <th>Dias</th><th>GR/dia</th><th>Total</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="q-body"></tbody>
+      </table>
+    </div>
+    <div id="q-total-bar" style="padding:12px 18px;background:var(--cinza-0);border-top:1px solid var(--cinza-1);display:none">
+      <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--verde)">TOTAL QSGR: <span id="q-total-val">R$ 0,00</span></span>
+      <span style="font-size:11px;color:var(--cinza-3);margin-left:16px" id="q-total-info"></span>
+    </div>
+  </div>
+</div>
+
+<!-- EVENTOS -->
+<div class="sec" id="s-eventos">
+  <div class="card">
+    <div class="card-title">Eventos e atividades pré-autorizados — Adt Adm CMS nº 06 e 07/2026</div>
+    <p style="font-size:12px;color:var(--cinza-3);margin-bottom:12px">Lista extraída do Aditamento Administrativo nº 06 ao Boletim do CMS nº 11 (18 MAR 2026) e Adt Adm nº 07 ao Boletim do CMS nº 13 (1º ABR 2026). Autorização condicionada à aprovação do Escalão Superior Imediato Enquadrante. Clique para preencher o formulário.</p>
+    <input class="ev-search" type="text" placeholder="Filtrar eventos..." oninput="filtrarEv(this.value)">
+    <div id="ev-count" style="font-size:11px;color:var(--cinza-3);margin-bottom:8px;font-family:var(--mono)"></div>
+    <div class="ev-list" id="ev-lista"></div>
+  </div>
+</div>
+
+<!-- LEGISLAÇÃO -->
+<div class="sec" id="s-legislacao">
+  <div class="g3">
+    <div>
+      <div class="leg-bloco">
+        <div class="leg-titulo">Lei nº 13.954, de 16 DEZ 2019</div>
+        <div class="leg-corpo">Instituição da Gratificação de Representação como parcela da remuneração dos militares da ativa. <strong>Anexo IV</strong>: percentual de <strong>2% do soldo por dia</strong> de atividade realizada.</div>
+      </div>
+      <div class="leg-bloco">
+        <div class="leg-titulo">Decreto nº 11.002, de 17 MAR 2022</div>
+        <div class="leg-corpo">
+          Regulamenta a GR.<br>
+          <strong>Art. 2º:</strong> somente militares da ativa.<br>
+          <strong>Art. 4º:</strong> hipóteses — Of-Gen (mensal), Comt/Dir/Ch OM (10%/mês), Viagem de Representação, Instrução, Emprego Operacional, ou à ordem de autoridade estrangeira no País. <strong>§1º: período ≥ 8h e < 24h = 1 dia.</strong><br>
+          <strong>Art. 5º:</strong> definições de VR, VI e EO. Parágrafo único: adestramento na sede ≠ EO, salvo missões de paz.<br>
+          <strong>Art. 6º:</strong> pagamento somente após autorização do Ministro da Defesa ou dos Comandantes.<br>
+          <strong>Art. 7º:</strong> GR não integra pensão militar.<br>
+          <strong>Art. 8º:</strong> não integra férias/adicional natalino. <strong>Inacumulável com diárias</strong> — ocorrendo cumulatividade, paga-se somente a diária.
+        </div>
+      </div>
+      <div class="leg-bloco">
+        <div class="leg-titulo">Portaria C Ex nº 1887, de 7 DEZ 2022 — EB10-N-08.003</div>
+        <div class="leg-corpo">
+          Normas para pagamento da GR.<br>
+          <strong>Art. 5º, I:</strong> solicitar autorização à autoridade competente com: natureza da atividade, local, duração em dias, efetivo previsto por posto/graduação, estimativa do montante, justificativa de antecipação (se for o caso).<br>
+          <strong>Art. 5º, II:</strong> publicar o recebimento da autorização no BI da OM, discriminando o valor a ser pago.<br>
+          <strong>Art. 5º, III:</strong> publicar em BI da OM, após a realização, com: enquadramento da atividade, sede da realização, duração em dias, autoridade que autorizou, relação nominal dos participantes, período de participação de cada militar, valor a ser pago a cada militar e ordem de saque nos sistemas corporativos.
+        </div>
+      </div>
+      <div class="leg-bloco">
+        <div class="leg-titulo">OS nº 13-E4/CMS, de 28 DEZ 2022 — em vigor desde 02 JAN 2023</div>
+        <div class="leg-corpo">
+          Diretriz do Comando Militar do Sul para autorização e pagamento de GR.<br>
+          <strong>Sede</strong> = limites políticos do município onde está localizada a OM.<br>
+          <strong>PTTC não faz jus à GR</strong> (Decreto 11.002, art. 2º).<br>
+          Autorizações relativas a exercícios anteriores: procedimento da Port. 1746 – Cmt Ex, 19 MAI 22.<br>
+          <strong>An A:</strong> principais eventos que fazem jus ao saque de GR (VR, VI e EO com exemplos).<br>
+          <strong>An B:</strong> procedimentos — solicitação ao CMS via canal de comando, publicação semanal no Bol CMS, processo com folhas do BI assinadas pelo Cmt/Ch/Dir da OM.<br>
+          <strong>An D:</strong> Modelo do Quadro de Solicitação de GR.<br>
+          <strong>An E:</strong> Modelo de Autorização de Saque de GR a ser publicado em Adt Adm ao Bol CMS.
+        </div>
+      </div>
+      <div class="leg-bloco" style="border-color: var(--ouro);">
+        <div class="leg-titulo" style="color:var(--ouro)">Adt Adm nº 06 ao Bol CMS nº 11 (18 MAR 2026) e Adt Adm nº 07 ao Bol CMS nº 13 (1º ABR 2026)</div>
+        <div class="leg-corpo">
+          Publicações vigentes do CMS para pagamento de GR.<br>
+          <strong>Item 1 — Autorização de Atividades e Eventos:</strong> lista de atividades pré-autorizadas (saque após aprovação do Esc Sup Imediato Enquadrante — Bda ou equivalente e G Cmdo).<br>
+          <strong>Item 2 — Autorização individual:</strong> tabelas por ODS (DECEx, G Cmdo) com OM, evento, atividade, período, efetivo por posto/grad e estimativa em R$. Assinadas pelo Gen Bda <strong>Alexandre Pfaender Junior</strong>, Chefe do Estado-Maior do CMS.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Simulador de GR</div>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="fg"><label>Posto / Graduação</label>
+            <select id="sim-posto" onchange="simular()">
+              <option value="">— selecione —</option>
+              <option value="Mar">Marechal — R$ 14.031</option>
+              <option value="Gen Ex">Gen Ex — R$ 14.077</option>
+              <option value="Gen Div">Gen Div — R$ 14.100</option>
+              <option value="Gen Bda">Gen Bda — R$ 13.639</option>
+              <option value="Cel">Coronel — R$ 12.505</option>
+              <option value="Ten Cel">Ten Cel — R$ 12.285</option>
+              <option value="Maj">Major — R$ 12.108</option>
+              <option value="Cap">Capitão — R$ 9.976</option>
+              <option value="1 Ten">1º Ten — R$ 9.004</option>
+              <option value="2 Ten">2º Ten — R$ 8.179</option>
+              <option value="Asp Of">Asp Of — R$ 7.988</option>
+              <option value="Sub Ten">ST — R$ 6.737</option>
+              <option value="1 Sgt">1º Sgt — R$ 5.988</option>
+              <option value="2 Sgt">2º Sgt — R$ 5.209</option>
+              <option value="3 Sgt">3º Sgt — R$ 4.177</option>
+              <option value="Cb">Cabo (Eng) — R$ 2.869</option>
+              <option value="Sd EP">Sd EP/Eng — R$ 1.927</option>
+              <option value="Sd Pqdt">Sd Pqdt — R$ 2.103</option>
+              <option value="Cb EV">Cb EV/N.Eng — R$ 1.177</option>
+              <option value="Sd EV">Sd EV — R$ 1.177</option>
+            </select>
+          </div>
+          <div class="fg"><label>Dias de atividade (≥ 8h/dia)</label>
+            <input type="number" id="sim-dias" value="10" min="1" oninput="simular()">
+          </div>
+        </div>
+        <div class="valor-destaque" id="sim-val">—</div>
+        <div class="formula" id="sim-formula"></div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="card-title">GR diária por posto — Jan/2026</div>
+        <table class="data">
+          <thead><tr><th>Posto/Grad</th><th>Soldo</th><th>GR/dia</th></tr></thead>
+          <tbody id="tb-soldos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+let ultimaAnalise = null;
+
+const SOLDOS = {
+  "Mar":14031,
+  "Gen Ex":14077,"Gen Div":14100,"Gen Bda":13639,
+  "Cel":12505,"Ten Cel":12285,"Maj":12108,"Cap":9976,
+  "1 Ten":9004,"2 Ten":8179,"Asp Of":7988,"Sub Ten":6737,
+  "1 Sgt":5988,"2 Sgt":5209,"3 Sgt":4177,
+  "Cb":2869,"Sd EP":1927,"Sd Pqdt":2103,"Cb EV":1177,"Sd EV":1177,
+  "Asp-Cad/Al IME Ult":1780,"Asp-Cad outros":1457,
+  "Al CPOR":1457,"Al EsSA":1309,"EsPCEx Ult":1309,"Al EsPCEx":1294
+};
+
+const EVENTOS = [
+  "1ª Capacitação de regulação e auditoria da 3ª RM, fora da sede",
+  "Adestramento Básico em Ambiente Virtual - CI Bld, fora da sede",
+  "Adestramento de Corneteiro e Clarins, fora da sede",
+  "Apoio a atividades que envolvam CSA (visita presidencial ou outra autoridade), fora da sede",
+  "Apoio à Justiça Eleitoral, fora da sede",
+  "Apoio a Órgãos Governamentais, autorizado pelo Cmdo 5ª DE, fora da sede",
+  "Apoio ao Serviço Militar Inicial, fora da sede",
+  "Apoio de Comunicações, na composição do CCOP da 3ª DE",
+  "Apoio de pessoal ao Setor de Aprovisionamento em eventos de passagem de comando, fora da Sede",
+  "Apoio de pessoal de Saúde em OM, fora da Sede",
+  "Apoio de Polícia do Exército - Emprego de Cães (faro), fora da sede",
+  "Apoio de saúde, fora da sede",
+  "Apoio direto de Comunicação Social e Cobertura Midiática, fora da sede",
+  "Apoio direto de Manutenção Logística, fora da sede",
+  "Apoio direto de Serviço de Engenharia, fora da sede",
+  "Apoio direto em diligências (IPM/Sindicâncias), fora da sede",
+  "Apoio nas evacuações médicas de pacientes de Alegrete para Santa Maria, Ijui e Porto Alegre",
+  "Apoio veterinário em OM, fora da Sede",
+  "Assessoria Técnica de contrainteligência 6ª DE",
+  "Assistência Religiosa da Capelania",
+  "Ativação do CCOP, para atividades de Emprego F Ter",
+  "Atividade de Assistência Social, fora da sede",
+  "Atividade de Campanha do Curso de Formação de Cabos (CFC)",
+  "Atividade de Campanha do Estágio Básico de Oficial Técnico Temporário (EBOT)",
+  "Atividade de Campanha do Estágio Básico de Sargento Temporário (EBST)",
+  "Atividade de Campanha do NPOR",
+  "Atividade de diligências de PE (IPM/Sindicâncias), fora da Sede",
+  "Atividade de Diligências de PE (Perícia Criminal), fora da sede",
+  "Atividade de Escolta em Motocicletas PE nas Visitas de Autoridades, fora da sede",
+  "Atividade de Patrulhamento Patrimonial",
+  "Atividades de Apoio ao Adestramento e Apoio a Certificação",
+  "Atividades de Representação em Solenidades de Conclusão de Cursos de Aperfeiçoamento",
+  "Atividades de Representação/Reunião por Autoridade Competente, fora da sede",
+  "Atividades Desportivas, fora da sede",
+  "Atividades de Operações de Informação, fora da sede",
+  "Atividades relacionadas ao AAV/2026 (UNPCRS)",
+  "Atividades Religiosas no Âmbito da 5ª DE (SAREx)",
+  "Atividades Religiosas no Âmbito do Comando Militar do Sul, Fora da Sede",
+  "Auditoria PASA, fora da sede",
+  "Capacitação em Inteligência - 5ª DE",
+  "Capacitação em Georreferenciamento/Geoinformação",
+  "Certificação FORPRON Geral",
+  "Certificação Simulação Construtiva e Viva - 15ª Bda Inf Mec e 5ª Bda C Bld",
+  "Coleta laboratorial, fora da sede",
+  "Comissão de Seleção Complementar, fora da sede",
+  "Comissão de Seleção MFDV",
+  "Comissão de Seleção TG",
+  "Corrida do Facho - Cmdo 5ª DE/5ª RM/GU/G Cmdo Art",
+  "Curso de Formação de Motorista CNH e CFCond Categoria C, D e E, fora da sede",
+  "Curso Especializado no SEST/SENAT/SENAI, fora da sede",
+  "EASV Tat SU, realizados no CA-Sul",
+  "Encontro Regional de Capelães do Comando Militar do Sul, Fora da Sede",
+  "Estágio de Área de APH Tático, fora da sede",
+  "Estágio de Área de Atendimento Pré-Hospitalar Tático (nível I, II e II), fora da sede",
+  "Estágio de Área de Operação da VBC OAP M109, fora da sede",
+  "Estágio de Área de Operações Urbanas, fora da sede",
+  "Estágio de Área de Segurança de Autoridade (SA), fora da sede",
+  "Estágio de Área de Operador dos Rádios Harris, fora da sede",
+  "Estágio de Área de Gerenciamento de Frota Blindada - CI Bld, fora da sede",
+  "Estágio de Área de Instrutor de Operações com Explosivos e Empaiolamento, fora da sede",
+  "Estágio de ARRAS - 15ª Bda Inf Mec, fora da sede",
+  "Estágio de Capacitação do Site Tático SRDT (apoio do 9º B Com GE), fora da sede",
+  "Estágio de explosivo, Fora da sede",
+  "Estágio de ODLA e Auxiliar de ODLA, fora da sede",
+  "Estágio de Open Source Intelligence (OSINT), no 6º Batalhão de Inteligência Militar, fora da sede",
+  "Estágio de Operações de Fronteira (TTP Fx Fronteira), fora da sede",
+  "Estágio de Planejamento de Exercícios com Apoio da Simulação de Combate, fora da sede",
+  "Estágio de Prevenção de Acidentes com Motocicletas - EPAM, fora da sede",
+  "Estágio de Reconhecimento de Vigilância, no 6º Batalhão de Inteligência Militar, fora da sede",
+  "Estágio de Simulação Virtual Tática, fora da sede",
+  "Estágio Inteligência Militar Terrestre, fora da sede",
+  "Estágio Operação SARP Categoria 0, fora da sede",
+  "Estágio Preparatório de Corpo de Tropa, fora da sede",
+  "Estágio Preparatório ETTR no CA-Leste, fora da sede",
+  "Estágio Radar FAB, Fora da sede",
+  "Estágio Setorial de OCA – COTER, fora da sede",
+  "Estágios Diversos (CMS, COTER, DEC, DOC, CCOPAB), fora da sede",
+  "Exercício Aço, fora da sede",
+  "Exercício Araucária, fora da sede",
+  "Exercício Cavalo de Tróia (Simulação virtual), fora da sede",
+  "Exercício Cmb Binacional ARANDU 2024-2026 – Simulação Viva, fora da sede",
+  "Exercício Combinado ARANDU, fora da sede",
+  "Exercício Combinado FELINO - 15ª Bda Inf Mec, fora da sede",
+  "Exercício Conjunto PERSEU 2026 CMO, fora da sede",
+  "Exercício de Adestramento com Simulação Construtiva, fora da sede",
+  "Exercício de Adestramento da Artilharia Antiaérea - Exercício SAGITTA PRIMUS, fora da sede",
+  "Exercício de Ajuda Humanitária, fora da sede",
+  "Exercício de Campanha de Adestramento de Reserva Mobilizável, fora da sede",
+  "Exercício de Defesa Civil, fora da sede",
+  "Exercício de Manutenção da Certificação FORPRON - 5ª Bda C Bld, fora da sede",
+  "Exercício de PO - 5ª DE, fora da sede",
+  "Exercício Escudo Antiaéreo, fora da sede",
+  "Exercício Guardião dos Campos, fora da sede",
+  "Exercício MONTESE",
+  "Exercício Operação Trovão, fora da sede",
+  "Exercício Pantanal (CMO), fora da sede",
+  "Exercício Salomão da Rocha, fora da sede",
+  "Exercício Santa Bárbara do Oeste (CMO), fora da sede",
+  "Exercício Setembrino de Carvalho, fora da sede",
+  "Exercício Tático de Tiro Real - ETTR, fora da sede",
+  "Experiência Doutrinária – Criação de OM, Fora da Sede",
+  "Experimentação Doutrinária REMAX M-113, fora da sede",
+  "Exposição do Exército (EXPOEx), fora da sede",
+  "IAUEx, fora da sede",
+  "Inspeção Anual de Armamento do Exército (IA2Ex)",
+  "Inspeção Anual de Munição do Exército (IAMEx)",
+  "Inspeção de Comando, fora da sede",
+  "Inspeção Logística/Administrativa - G Cmdo/GU - fora da sede",
+  "Inspeções das GU / G Cmdo Art às OMDS",
+  "Instrução de Cavalariça e Ferradoria",
+  "Instrução de Nivelamento e Procedimentos de C2",
+  "Instrução de Nivelamento e Procedimentos de Instrução de Blindados",
+  "Instrução Individual Básica - Campo da IIB, fora da sede",
+  "Instrução Individual de Qualificação - Campo da IIQ, fora da sede",
+  "Instrução Individual de Qualificação - Campo do PAB GLO, fora da sede",
+  "Instrução Individual de Requalificação e Nivelamento de Cb/Sd, fora da sede",
+  "IVR, Fora da sede",
+  "Jogos de Guerra, fora da sede",
+  "Jogos Marciais do Exército ou equivalente",
+  "Manobra Escolar da AMAN",
+  "Missões de apoio de saúde, fora da sede",
+  "Operação Acolhida",
+  "Operação Ágata",
+  "Operação ARANDU",
+  "Operação Araucária",
+  "Operação Atena",
+  "Operação Atlas",
+  "Operação Bagé",
+  "Operação Boina Verde / Acampamento da IIB",
+  "Operação Bormann - 5ª DE",
+  "Operação Braçal (OM PE)",
+  "Operação Braçal de Ferro",
+  "Operação CADEADO",
+  "Operação Campos Gerais",
+  "Operação Centurião",
+  "Operação Controle I, II e III",
+  "Operação Controle VI",
+  "Operação Controle VII",
+  "Operação Controle VIII",
+  "Operação Cronos I a IV",
+  "Operação Cronos XI a XXV",
+  "Operação Cronos XII",
+  "Operação Crotalus",
+  "Operação de Garantia da Lei e da Ordem",
+  "Operação Elmo",
+  "Operação Elmo X a XX",
+  "Operação Escudo",
+  "Operação Escudo IV",
+  "Operação Faixa de Fronteira",
+  "Operação Felino",
+  "Operação Forja",
+  "Operação FRONTEIRA SUL",
+  "Operação FURACÃO",
+  "Operação Gralha Azul",
+  "Operação Guardião da Fronteira",
+  "Operação Harpia",
+  "Operação Hórus (Faixa de Fronteira)",
+  "Operação Itaipu",
+  "Operação JACUÍ - Ex Ajud Hum Apoio Def Civ",
+  "Operação LANÇA DE OSÓRIO",
+  "Operação LEITE de CASTRO - SIMAF",
+  "Operação MALLET",
+  "Operação MANOTAÇO",
+  "Operação MARQUÊS DE TAMANDARÉ - SIMAF",
+  "Operação Meios de Travessias - Ponte LSB",
+  "Operação Meios de Travessias - Ponte M4T6 - PELOTAS",
+  "Operação MINUANO",
+  "Operação MONTESE",
+  "Operação PASSO DA PÁTRIA",
+  "Operação Pé Vermelho",
+  "Operação Peekaamba",
+  "Operação Perseu",
+  "Operação Proteção",
+  "Operação Pugnatum",
+  "Operação Punho de Aço",
+  "Operação Redentor",
+  "Operação Relâmpago Norte",
+  "Operação Salomão da Rocha",
+  "Operação SANTA TECLA - Simulação Virtual",
+  "Operação SANTANA - Simulação Virtual",
+  "Operação Silva Paes",
+  "Operação Sisson",
+  "Operação SMIF",
+  "Operação TAQUAREMBÓ - Simulação Construtiva",
+  "Operação Vitória",
+  "Operação Vulcão V e VI",
+  "Operações de Garantia de Votação e Apuração",
+  "Operações de Inteligência",
+  "PAB U (6ª Bda Inf Bld, 1ª Bda C Mec, 2ª Bda C Mec e AD/3), incluindo Prep e Rec",
+  "Palestra de Instrução MFDV",
+  "Participação em atividades de simpósios/seminários relativos à doutrina militar, fora da sede",
+  "Participação em capacitação técnica, fora da sede",
+  "Participação em curso para condutores de viaturas de emergência em local, fora da sede",
+  "Participação em eventos culturais com a Banda de Música",
+  "Participação em Simpósio/Palestra de interesse da Administração Militar, fora da Sede",
+  "Participação em solenidades cívico/militar, fora da sede",
+  "Participação na Reunião de Comando do CMS",
+  "Participação na visita do Cmt Mil S à GU/G Cmdo Art e OMDS",
+  "Passagem de Comando, fora da sede",
+  "PCI AMAN",
+  "Pedido de Cooperação de Instrução (PCI), fora da sede",
+  "Realização de curso do Projeto Soldado Cidadão, fora da sede",
+  "Reconhecimento do Exercício Combinado, fora da sede",
+  "Recrutamento de Pessoal nas Atividades da Comissão de Seleção, fora da Sede",
+  "Reunião de Comando, fora da sede",
+  "Reunião do Sistema de Inteligência da 5ª DE",
+  "Reunião dos Adjuntos de Comando",
+  "Reunião Inicial da Operação PERSEU",
+  "Reunião Setorial de Inteligência",
+  "Semana da Pátria",
+  "Seminário de Apoio Logístico nas FT Bld",
+  "Seminário de Direito Militar",
+  "SIMAF - OM Art",
+  "SIMAF - Pel Mrt Pesado",
+  "Solenidade Alusiva ao Cerco da Lapa",
+  "Solenidade de Celebração de Aniversário de G Cmdo/GU/OM",
+  "Solenidade de Comemoração do dia das Armas/Quadros/Serviços/Patrono das Armas",
+  "Solenidades Cívico Militar: Dia do Exército Brasileiro/Dia da Vitória/Dia da Conquista de Fornovo/Dia do Expedicionário/Dia do Soldado",
+  "Tiro das Armas Coletivas das GU / GCmdo Art / OMDS, fora da sede",
+  "UNPCRS - Adestramento para participação em missões de paz",
+  "Visita de Orientação Técnica Logística (VOT Log) – Comando Militar do Sul, Fora da Sede",
+  "Visitas de Auditoria Técnica, fora da sede",
+  "Visitas de Orientação Técnica, fora da sede",
+  "Workshop Gestão da Frota do M 109",
+  "Workshop Gestão da Frota M113",
+  "Exc Cnb Brasil/Paraguai – Operação Paraná",
+  "Estágio de Área de Operador de Informações",
+  "Operações integradas de fronteira, fiscalização aduaneira e proteção ao migrante",
+  "Atividade de Campanha do Curso de Formação de Sargento Temporário, fora da sede",
+  "Operação Elmo XIV a XXIV",
+  "Operação Argos",
+  "Operação Escudo V a X",
+  "Operação Argos I a V",
+  "Operação Cronos XIV a XXIV",
+  "Operação Minerva",
+  "Operação Vulcão",
+  "Reunião Setorial do Sistema de Fiscalização de Produtos Controlados da 3ª RM, fora da sede",
+  "Apoio logístico no transporte de militares, fora da sede",
+  "Apoio logístico no transporte de materiais de emprego militar (material de emprego, gêneros, suprimentos, mantimentos, víveres, munições, combustíveis, equipamentos), fora da sede"
+];
+
+const DADOS = [
+  {n:"Cel ROBERTO ALVES",nip:"111222333",pt:"Cel",ev:"Operação Acolhida",tp:"eo",ini:"2026-04-01",fim:"2026-04-10",dias:10,sl:12505,hr:10,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"aprovado",val:2501.00},
+  {n:"TC MARCOS FERREIRA",nip:"222333444",pt:"Ten Cel",ev:"Reunião de Comando, fora da sede",tp:"vr",ini:"2026-04-03",fim:"2026-04-08",dias:6,sl:12285,hr:9,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"aprovado",val:1474.20},
+  {n:"Maj ANA PAULA LIMA",nip:"333444555",pt:"Maj",ev:"Exercício Pantanal (CMO), fora da sede",tp:"eo",ini:"2026-04-05",fim:"2026-04-20",dias:15,sl:12108,hr:12,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"aprovado",val:3632.40},
+  {n:"Cap PEDRO SOUZA",nip:"444555666",pt:"Cap",ev:"Seminário de Direito Militar",tp:"vi",ini:"2026-04-07",fim:"2026-04-09",dias:3,sl:9976,hr:7,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"reprovado",val:0},
+  {n:"1T LUCIA NEVES",nip:"555666777",pt:"1 Ten",ev:"Atividades Desportivas, fora da sede",tp:"vr",ini:"2026-04-10",fim:"2026-04-12",dias:3,sl:9004,hr:10,fora:"sim",au:"nao",bl:"",bi:"nao",di:"nao",at:"sim",st:"reprovado",val:0},
+  {n:"Maj SERGIO COSTA",nip:"666777888",pt:"Maj",ev:"Exercício Combinado ARANDU, fora da sede",tp:"eo",ini:"2026-04-12",fim:"2026-04-25",dias:13,sl:12108,hr:11,fora:"sim",au:"sim",bl:"",bi:"nao",di:"nao",at:"sim",st:"pendente",val:0},
+  {n:"Cap FERNANDA ROCHA",nip:"777888999",pt:"Cap",ev:"Operação ARANDU",tp:"eo",ini:"2026-04-14",fim:"2026-04-18",dias:5,sl:9976,hr:10,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"aprovado",val:997.60},
+  {n:"3 Sgt ANA GOMES",nip:"888999111",pt:"3 Sgt",ev:"Instrução Individual Básica - Campo da IIB, fora da sede",tp:"vi",ini:"2026-04-20",fim:"2026-04-30",dias:11,sl:4177,hr:10,fora:"sim",au:"sim",bl:"Adt Adm nº 06 ao Bol CMS nº 11/2026",bi:"sim",di:"nao",at:"sim",st:"aprovado",val:919.94},
+];
+
+function showS(id) {
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('s-' + id).classList.add('on');
+  const idx = ['dash','qsgr','eventos','legislacao'].indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('on');
+}
+
+// ── QSGR BATCH IMPORT ──────────────────────────────────────────────
+
+const POSTO_OPTS = Object.keys(SOLDOS).filter(k => k !== 'Mar' || true);
+
+function qPosSelect(val) {
+  return `<select style="font-size:11px;border:1px solid var(--cinza-1);border-radius:4px;padding:3px 4px;width:100%" onchange="qRecalcRow(this)">${
+    Object.keys(SOLDOS).map(p => `<option value="${p}"${p===val?' selected':''}>${p}</option>`).join('')
+  }</select>`;
+}
+
+function qAddRow(posto, nome, nip) {
+  const tbody = document.getElementById('q-body');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="min-width:130px">${qPosSelect(posto||'')}</td>
+    <td><input type="text" value="${nome||''}" style="width:100%;border:1px solid var(--cinza-1);border-radius:4px;padding:3px 6px;font-size:12px" oninput="qRecalcRow(this)"></td>
+    <td><input type="text" value="${nip||''}" style="width:80px;border:1px solid var(--cinza-1);border-radius:4px;padding:3px 6px;font-size:11px;font-family:var(--mono)"></td>
+    <td class="q-dias" style="text-align:center;font-family:var(--mono);font-size:12px">—</td>
+    <td class="q-grd" style="font-family:var(--mono);font-size:12px">—</td>
+    <td class="q-tot" style="font-family:var(--mono);font-size:12px;font-weight:600">—</td>
+    <td class="q-st"></td>
+    <td><button onclick="this.closest('tr').remove();qSumTotal()" style="background:transparent;border:none;cursor:pointer;color:var(--cinza-2);font-size:14px">✕</button></td>`;
+  tbody.appendChild(tr);
+  qRecalcRow(tr.querySelector('select'));
+}
+
+function qRecalcRow(el) {
+  const tr = el.closest('tr');
+  const posto = tr.querySelector('select').value;
+  const soldo = SOLDOS[posto] || 0;
+  const ini = new Date(document.getElementById('q-ini').value);
+  const fim = new Date(document.getElementById('q-fim').value);
+  const horas = parseFloat(document.getElementById('q-horas').value) || 10;
+  const dias = (!isNaN(ini) && !isNaN(fim) && fim >= ini)
+    ? Math.round((fim - ini)/(1000*60*60*24)) + 1 : 0;
+  const grd = soldo * 0.02;
+  const tot = grd * dias;
+  tr.querySelector('.q-dias').textContent = dias || '—';
+  tr.querySelector('.q-grd').textContent = soldo ? `R$ ${grd.toFixed(2)}` : '—';
+  tr.querySelector('.q-tot').textContent = (soldo && dias) ? `R$ ${tot.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—';
+  const ok = soldo > 0 && dias > 0 && horas >= 8;
+  const warn = soldo > 0 && dias > 0 && horas < 8;
+  tr.querySelector('.q-st').innerHTML = ok
+    ? '<span class="badge b-ok">OK</span>'
+    : warn ? '<span class="badge b-warn">H&lt;8</span>'
+    : '<span class="badge b-err">Pendente</span>';
+  qSumTotal();
+}
+
+function qRecalcAll() {
+  document.querySelectorAll('#q-body tr').forEach(tr => {
+    qRecalcRow(tr.querySelector('select'));
+  });
+}
+
+function qSumTotal() {
+  let total = 0; let n = 0; let ok = 0;
+  document.querySelectorAll('#q-body tr').forEach(tr => {
+    const t = tr.querySelector('.q-tot').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.');
+    const v = parseFloat(t);
+    if (!isNaN(v)) { total += v; n++; }
+    if (tr.querySelector('.b-ok')) ok++;
+  });
+  const bar = document.getElementById('q-total-bar');
+  if (n > 0) {
+    bar.style.display = 'block';
+    document.getElementById('q-total-val').textContent = `R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    document.getElementById('q-total-info').textContent = `${n} militar(es) | ${ok} OK`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function qProcessAll() {
+  document.querySelectorAll('#q-body tr').forEach(tr => qRecalcRow(tr.querySelector('select')));
+}
+
+const RANK_PATTERNS = [
+  ['Mar','Mar'],
+  ['Gen\\s*Ex','Gen Ex'],['Gen\\s*Div','Gen Div'],['Gen\\s*Bda','Gen Bda'],
+  ['Ten\\s*Cel','Ten Cel'],['Cel','Cel'],
+  ['Maj','Maj'],['Cap','Cap'],
+  ['1[°º]?\\s*Ten','1 Ten'],['2[°º]?\\s*Ten','2 Ten'],
+  ['Asp\\s*Of','Asp Of'],['Sub\\s*Ten','Sub Ten'],
+  ['1[°º]?\\s*Sgt','1 Sgt'],['2[°º]?\\s*Sgt','2 Sgt'],['3[°º]?\\s*Sgt','3 Sgt'],
+  ['Cb\\s*EV','Cb EV'],['Cb\\s*EP','Cb'],['Cb','Cb'],
+  ['Sd\\s*EP','Sd EP'],['Sd\\s*Pqdt','Sd Pqdt'],['Sd\\s*EV','Sd EV']
+];
+
+function qParseOCR() {
+  const txt = document.getElementById('q-ocr').value;
+  if (!txt.trim()) return;
+  const found = [];
+  for (const [pat, key] of RANK_PATTERNS) {
+    const re = new RegExp(`\\b(${pat})\\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ][A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ\\s]{3,50})`, 'g');
+    let m;
+    while ((m = re.exec(txt)) !== null) {
+      const nome = m[2].trim().replace(/\s{2,}/g,' ').substring(0,60);
+      if (nome.length > 4 && !found.some(f => f.nome === nome))
+        found.push({ posto: key, nome });
+    }
+  }
+  if (!found.length) { alert('Nenhuma pessoa identificada no texto. Verifique o formato.'); return; }
+  found.forEach(f => qAddRow(f.posto, f.nome));
+  qRecalcAll();
+  document.getElementById('q-ocr').value = '';
+}
+
+function autoSoldo() {
+  const p = document.getElementById('f-posto').value;
+  if (SOLDOS[p]) document.getElementById('f-soldo').value = SOLDOS[p];
+}
+
+function buildDash() {
+  const nPostos   = Object.keys(SOLDOS).length;
+  const nEventos  = EVENTOS.length;
+  const grCel     = (SOLDOS['Cel'] * 0.02).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const grMaj     = (SOLDOS['Maj'] * 0.02).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  const grCb      = (SOLDOS['Cb']  * 0.02).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Eventos pré-autorizados</div><div class="metric-value mv-base">${nEventos}</div></div>
+    <div class="metric"><div class="metric-label">Postos cadastrados</div><div class="metric-value mv-base">${nPostos}</div></div>
+    <div class="metric"><div class="metric-label">GR/dia — Cel</div><div class="metric-value mv-ok" style="font-size:16px">R$ ${grCel}</div></div>
+    <div class="metric"><div class="metric-label">GR/dia — Maj</div><div class="metric-value mv-ok" style="font-size:16px">R$ ${grMaj}</div></div>
+    <div class="metric"><div class="metric-label">GR/dia — Cb</div><div class="metric-value mv-ok" style="font-size:16px">R$ ${grCb}</div></div>
+    <div class="metric"><div class="metric-label">Tabela vigente</div><div class="metric-value mv-base" style="font-size:13px">Jan/2026</div></div>`;
+  const cr = [
+    ["Autorização Adt Adm/Bol CMS", 83, "#1d9e75"],
+    ["Enquadramento legal", 90, "#1d9e75"],
+    ["Carga horária ≥ 8h/dia", 83, "#1d9e75"],
+    ["BI da OM publicado", 75, "#b8921e"],
+    ["Militar da ativa", 100, "#1d9e75"],
+    ["Inacumulável c/ diárias", 100, "#1d9e75"]
+  ];
+  document.getElementById('dash-bars').innerHTML = cr.map(([l, v, c]) =>
+    `<div class="bar-row"><span class="bar-label">${l}</span><div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${c}">${v}%</div></div></div>`
+  ).join('');
+  const postos = [["Marechal","Mar"],["Gen Ex","Gen Ex"],["Gen Bda","Gen Bda"],["Coronel","Cel"],["Ten Cel","Ten Cel"],["Major","Maj"],["Capitão","Cap"],["1º Ten","1 Ten"],["Subtenente","Sub Ten"],["1º Sgt","1 Sgt"],["2º Sgt","2 Sgt"],["3º Sgt","3 Sgt"]];
+  document.getElementById('dash-soldos').innerHTML = '<table class="data"><thead><tr><th>Posto</th><th>Soldo</th><th>GR/dia (2%)</th></tr></thead><tbody>' +
+    postos.map(([n, k]) => `<tr><td>${n}</td><td>R$ ${(SOLDOS[k]||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="font-weight:600;color:var(--verde-l)">R$ ${((SOLDOS[k]||0)*0.02).toFixed(2)}</td></tr>`).join('') +
+    '</tbody></table>';
+  buildSoldosTab();
+}
+
+function buildSoldosTab() {
+  const rows = Object.entries(SOLDOS).map(([p, s]) =>
+    `<tr><td>${p}</td><td>R$ ${s.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td><td style="font-weight:600;color:var(--verde-l)">R$ ${(s*0.02).toFixed(2)}</td></tr>`
+  ).join('');
+  const el = document.getElementById('tb-soldos');
+  if (el) el.innerHTML = rows;
+}
+
+function renderTbl(f = "todos", b = "") {
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = "";
+  DADOS.filter(d => (f === "todos" || d.st === f) && (b === "" || d.n.toLowerCase().includes(b.toLowerCase()) || d.nip.includes(b))).forEach(d => {
+    const bc = d.st === "aprovado" ? "b-ok" : d.st === "pendente" ? "b-warn" : "b-err";
+    const bl = d.st === "aprovado" ? "Aprovado" : d.st === "pendente" ? "Pendente" : "Reprovado";
+    tbody.innerHTML += `<tr>
+      <td>${d.n}</td><td>${d.pt}</td>
+      <td style="max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${d.ev}">${d.ev}</td>
+      <td style="font-family:var(--mono);font-size:11px">${d.ini} → ${d.fim}</td>
+      <td style="text-align:center">${d.dias}</td>
+      <td style="font-family:var(--mono)">R$ ${d.val.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td><span class="badge ${bc}">${bl}</span></td>
+      <td><button onclick='preencherD(${JSON.stringify(d)})' style="background:transparent;border:1px solid var(--cinza-1);border-radius:var(--r);padding:3px 9px;font-size:11px;cursor:pointer;color:var(--cinza-3)">ver ▶</button></td>
+    </tr>`;
+  });
+}
+
+function filtTbl(v) { renderTbl(v, document.querySelector('#s-req input').value); }
+function buscarTbl(v) { renderTbl(document.querySelector('#s-req select').value, v); }
+
+function preencherD(d) {
+  showS('analise');
+  document.getElementById('f-nome').value = d.n;
+  document.getElementById('f-nip').value = d.nip;
+  document.getElementById('f-posto').value = d.pt;
+  document.getElementById('f-soldo').value = d.sl;
+  document.getElementById('f-inicio').value = d.ini;
+  document.getElementById('f-fim').value = d.fim;
+  document.getElementById('f-horas').value = d.hr;
+  document.getElementById('f-tipo').value = d.tp;
+  document.getElementById('f-atividade').value = d.ev;
+  document.getElementById('f-fora').value = d.fora;
+  document.getElementById('f-autor').value = d.au;
+  document.getElementById('f-bol').value = d.bl || "";
+  document.getElementById('f-bi').value = d.bi;
+  document.getElementById('f-diaria').value = d.di;
+  document.getElementById('f-ativo').value = d.at;
+  analisar();
+}
+
+function buscarAc(v) {
+  const box = document.getElementById('ac-box');
+  if (v.length < 2) { box.style.display = 'none'; return; }
+  const res = EVENTOS.filter(e => e.toLowerCase().includes(v.toLowerCase())).slice(0, 8);
+  if (!res.length) { box.style.display = 'none'; return; }
+  box.innerHTML = res.map(e => `<div class="ac-item" onclick="selAc('${e.replace(/'/g, "\\'")}')">${e}</div>`).join('');
+  box.style.display = 'block';
+}
+function selAc(e) { document.getElementById('f-atividade').value = e; document.getElementById('ac-box').style.display = 'none'; }
+document.addEventListener('click', e => { if (!e.target.closest('.ac-wrap')) document.getElementById('ac-box').style.display = 'none'; });
+
+function limpar() {
+  ['f-om','f-qsgr','f-local','f-descricao','f-nome','f-nip','f-soldo','f-horas','f-inicio','f-fim','f-atividade','f-bol'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('parecer-area').innerHTML = '';
+  document.getElementById('ac-box').style.display = 'none';
+}
+
+function analisar() {
+  const nome = document.getElementById('f-nome').value || "(sem nome)";
+  const soldo = parseFloat(document.getElementById('f-soldo').value) || 0;
+  const horas = parseFloat(document.getElementById('f-horas').value) || 0;
+  const ini = new Date(document.getElementById('f-inicio').value);
+  const fim = new Date(document.getElementById('f-fim').value);
+  const tipo = document.getElementById('f-tipo').value;
+  const ativ = document.getElementById('f-atividade').value.trim();
+  const fora = document.getElementById('f-fora').value;
+  const autor = document.getElementById('f-autor').value;
+  const bol = document.getElementById('f-bol').value.trim();
+  const bi = document.getElementById('f-bi').value;
+  const diaria = document.getElementById('f-diaria').value;
+  const ativo = document.getElementById('f-ativo').value;
+
+  const dias = (!isNaN(ini) && !isNaN(fim) && fim >= ini) ? Math.round((fim - ini) / (1000*60*60*24)) + 1 : 0;
+  const valor = soldo * 0.02 * dias;
+  const checks = [];
+  let ok = true;
+
+  function add(estado, lei, txt) {
+    checks.push({ ok: estado, lei, txt });
+    if (estado === false) ok = false;
+    else if (estado === null && ok !== false) ok = null;
+  }
+
+  add(ativo === "sim", "Decreto 11.002/22, art. 2º", ativo === "sim" ? "Militar da ativa: habilitado ao recebimento de GR" : "MILITAR PTTC OU INATIVO — não faz jus à GR");
+
+  if (tipo) add(true, "Decreto 11.002/22, art. 4º, inciso II", `Hipótese legal: ${tipo==='vr'?'Viagem de Representação (art. 5º, I)':tipo==='vi'?'Viagem de Instrução (art. 5º, II)':'Emprego Operacional (art. 5º, III)'}`);
+  else add(null, "Decreto 11.002/22, art. 4º", "Tipo de evento não selecionado — necessário para enquadramento legal");
+
+  if (fora === "sim") add(true, "OS 13-E4/CMS, item b.3", "Atividade fora dos limites políticos do município da OM: configura deslocamento 'fora da sede'");
+  else add(false, "OS 13-E4/CMS, item b.3 e Decreto 11.002/22, art. 5º, par. ún.", "Atividade realizada dentro da sede — adestramento na própria OM não configura EO, salvo missão de paz (alínea 'e')");
+
+  add(horas >= 8, "Decreto 11.002/22, art. 4º, §1º", horas >= 8 ? `Carga horária: ${horas}h/dia ≥ 8h — computa como 1 dia (período entre ≥ 8h e < 24h)` : `Carga horária: ${horas}h/dia — INSUFICIENTE. Mínimo: 8 horas para cômputo de 1 dia`);
+
+  const evMatch = ativ.length > 3 && EVENTOS.some(e => e.toLowerCase().includes(ativ.toLowerCase().substring(0, Math.min(20, ativ.length))));
+  if (ativ) add(evMatch ? true : null, "Adt Adm CMS nº 06 e 07/2026 (Bol CMS nº 11 e 13)", evMatch ? `Evento localizado na lista de pré-autorizações do CMS: "${ativ.substring(0, 80)}"` : "Evento NÃO localizado na lista de pré-autorizações — verificar se há autorização específica no Adt Adm vigente ou solicitar ao CMS via canal de comando");
+  else add(false, "OS 13-E4/CMS", "Atividade não informada — campo obrigatório para análise de enquadramento");
+
+  add(autor === "sim", "Decreto 11.002/22, art. 6º e OS 13-E4/CMS, An B", autor === "sim" ? "Autorização publicada em Aditamento Administrativo ao Boletim do CMS: confirmada" : "AUTORIZAÇÃO AUSENTE — requisito imprescindível. O saque não pode ser implantado sem publicação em Adt Adm ao Bol CMS");
+
+  if (bol) add(true, "OS 13-E4/CMS, An B, item i", `Referência do ato autorizativo: ${bol}`);
+  else add(null, "OS 13-E4/CMS, An B", "Referência do Adt Adm / Boletim CMS não informada — complementar antes do saque");
+
+  add(bi === "sim", "EB10-N-08.003, art. 5º, inciso III", bi === "sim" ? "BI da OM pós-evento publicado com todos os dados exigidos: enquadramento, sede, duração, autoridade, relação nominal, período de cada militar, valor e ordem de saque" : "BI DA OM PÓS-EVENTO PENDENTE — obrigatório antes da implantação nos sistemas corporativos de pagamento");
+
+  add(diaria === "nao", "Decreto 11.002/22, art. 8º, inciso II", diaria === "nao" ? "GR não acumulada com diárias: conforme à vedação legal" : "VEDAÇÃO LEGAL: GR é inacumulável com diárias. Ocorrendo a cumulatividade, deve-se pagar somente a diária (parágrafo único)");
+
+  if (dias > 0) add(true, "Decreto 11.002/22, art. 4º, §1º e Anexo IV, Lei 13.954/19", `Período válido: ${dias} dia(s) — de ${document.getElementById('f-inicio').value} a ${document.getElementById('f-fim').value}`);
+  else add(false, "", "Período inválido — verifique as datas de início e fim informadas");
+
+  if (soldo > 0) add(true, "Tabela de Soldos Jan/2026 e Anexo IV, Lei 13.954/19", `Soldo mensal: R$ ${soldo.toLocaleString('pt-BR', {minimumFractionDigits:2})} | GR diária calculada: R$ ${(soldo*0.02).toFixed(2)}`);
+  else add(null, "Tabela de Soldos Jan/2026", "Soldo não informado — selecione o posto para preenchimento automático pelo sistema");
+
+  const status = ok === true ? "aprov" : ok === false ? "reprov" : "pend";
+  const statusLabel = ok === true ? "✓ APROVADO — SAQUE AUTORIZADO" : ok === false ? "✗ REPROVADO — SAQUE VEDADO" : "⚠ PENDENTE — COMPLEMENTAR DOCUMENTAÇÃO";
+  const statusSub = ok === true
+    ? `Valor calculado: R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits:2})} (${dias} dia(s) × 2% × R$ ${soldo.toLocaleString('pt-BR', {minimumFractionDigits:2})}). Todos os requisitos legais atendidos.`
+    : ok === false
+    ? "O requerimento apresenta irregularidade(s) que impedem o saque. Verifique os itens marcados com ✗."
+    : "Requerimento com pendências documentais. O saque não pode ser efetivado até a regularização dos itens marcados com ⚠.";
+
+  const chkHtml = checks.map(c => {
+    const iconTxt = c.ok === true ? "✓" : c.ok === false ? "✗" : "⚠";
+    const iconCls = c.ok === true ? "ic-ok" : c.ok === false ? "ic-err" : "ic-warn";
+    return `<li>
+      <div class="chk-icon ${iconCls}">${iconTxt}</div>
+      <div><span>${c.txt}</span>${c.lei ? `<span class="chk-lei">${c.lei}</span>` : ''}</div>
+    </li>`;
+  }).join('');
+
+  ultimaAnalise = {
+    nome, nip: document.getElementById('f-nip').value,
+    posto: document.getElementById('f-posto').value,
+    om: document.getElementById('f-om').value,
+    qsgr: document.getElementById('f-qsgr').value,
+    local: document.getElementById('f-local').value,
+    descricao: document.getElementById('f-descricao').value,
+    evento: ativ, tipo,
+    ini: document.getElementById('f-inicio').value,
+    fim: document.getElementById('f-fim').value,
+    dias, horas, soldo, status, valor, criterios: checks
+  };
+
+  document.getElementById('parecer-area').innerHTML = `
+    <div class="parecer par-${status}">
+      <div class="par-title">${statusLabel}</div>
+      <div class="par-sub">${statusSub}</div>
+      <ul class="chk-list">${chkHtml}</ul>
+      ${ok === true ? `
+      <div class="calc-box">
+        <div class="calc-row"><span>Soldo mensal vigente (Tabela Jan/2026)</span><span>R$ ${soldo.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></div>
+        <div class="calc-row"><span>Percentual diário (Anexo IV, Lei nº 13.954/19)</span><span>2%</span></div>
+        <div class="calc-row"><span>GR por dia de atividade</span><span>R$ ${(soldo*0.02).toFixed(2)}</span></div>
+        <div class="calc-row"><span>Dias computados (≥ 8h de atividade cada)</span><span>${dias} dia(s)</span></div>
+        <div class="calc-row"><span>Valor total a pagar</span><span>R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></div>
+      </div>` : ''}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.1)">
+        <button class="btn-p" onclick="gerarParecer('individual')" style="padding:8px 18px;font-size:12px">📄 Gerar Parecer PDF</button>
+      </div>
+    </div>`;
+}
+
+function buildEventos() {
+  const lista = document.getElementById('ev-lista');
+  lista.innerHTML = EVENTOS.map((e, i) =>
+    `<div class="ev-item" id="ev${i}" onclick="selEvento('${e.replace(/'/g, "\\'")}', ${i})"><div class="ev-dot"></div>${e}</div>`
+  ).join('');
+  document.getElementById('ev-count').textContent = `${EVENTOS.length} eventos cadastrados (Adt Adm CMS nº 06 e 07/2026)`;
+}
+
+function filtrarEv(v) {
+  let count = 0;
+  document.querySelectorAll('.ev-item').forEach(el => {
+    const show = v === '' || el.textContent.toLowerCase().includes(v.toLowerCase());
+    el.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  document.getElementById('ev-count').textContent = `${count} evento(s) exibido(s)`;
+}
+
+function selEvento(ev, i) {
+  document.querySelectorAll('.ev-item').forEach(el => el.classList.remove('sel'));
+  document.getElementById('ev' + i).classList.add('sel');
+}
+
+function simular() {
+  const p = document.getElementById('sim-posto').value.split(' — ')[0];
+  const posto = Object.keys(SOLDOS).find(k => k === p || document.getElementById('sim-posto').value.startsWith(k));
+  const soldo = posto ? SOLDOS[posto] : 0;
+  const dias = parseInt(document.getElementById('sim-dias').value) || 0;
+  if (!soldo) { document.getElementById('sim-val').textContent = '—'; document.getElementById('sim-formula').textContent = ''; return; }
+  const val = soldo * 0.02 * dias;
+  document.getElementById('sim-val').textContent = 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits:2});
+  document.getElementById('sim-formula').textContent = `R$ ${soldo.toLocaleString('pt-BR')} × 2% × ${dias} dias`;
+}
+
+document.getElementById('sim-posto').addEventListener('change', function() {
+  const opts = Array.from(this.options);
+  const sel = opts.find(o => o.selected);
+  if (!sel || !sel.value) return;
+  const p = sel.value;
+  if (SOLDOS[p]) simular();
+});
+
+buildDash();
+buildEventos();
+
+// Pré-carrega QSGR 36/2026 como exemplo
+(function initQSGR() {
+  document.getElementById('q-nr').value    = '36/2026';
+  document.getElementById('q-om').value    = '5º RCC';
+  document.getElementById('q-tipo').value  = 'vi';
+  document.getElementById('q-local').value = 'Ponta Grossa/PR';
+  document.getElementById('q-ini').value   = '2026-04-09';
+  document.getElementById('q-fim').value   = '2026-04-10';
+  document.getElementById('q-horas').value = '10';
+  document.getElementById('q-desc').value  = 'Viagem de Instrução: Treinamento de formatura de Passagem de Comando da 5ª Bda C Bld.';
+  document.getElementById('q-amparo').value = 'Letra "F", nº 2, Anexo "A", OS 13-D17/CMS, 28 DEZ 22 e Inciso II, Art. 5º, Decreto 11.002/22';
+  document.getElementById('q-preaut').value = 'Adt Adm nº06 ao Bol CMS nº11, 18 MAR 2026';
+  const pessoas = [
+    ['Cap','LUCAS RODRIGUES ALVES'],['1 Ten','VINICIUS HAHN FLACH'],
+    ['2 Ten','RODRIGO THIERRY BERBECKA'],['2 Ten','RAÍ MONTEIRO DE SOUZA'],
+    ['2 Sgt','MARCOS VINICIUS PEDROSA DE SOUZA'],['3 Sgt','DYONATAN DORNELES XAVIER'],
+    ['3 Sgt','MARCELO DE ALMEIDA SOMAVILA'],['3 Sgt','BRUNO RIGHI NICOLOSO'],
+    ['3 Sgt','DAVI WESLEY OLIVEIRA LEITE'],['3 Sgt','JONATAS GEZEGEND CARLOS GARCOM'],
+    ['3 Sgt','ISAQUE SOARES CARDIN'],['3 Sgt','AMIR GABRIEL TOSTES KOBROSLY'],
+    ['3 Sgt','THIAGO VALENÇA PEREIRA'],['3 Sgt','MATEUS FERNANDES'],
+    ['3 Sgt','JEAN CARLOS WONGELTNER'],
+    ['Cb','AIRTON SIDNEI RUTHES JUNIOR'],['Cb','MATHEUS KRUCZKIEWICZ COSTA'],
+    ['Cb','MATHEUS BUENO DE LIMA'],['Cb','WILLIAM MATHEUS KOJIKOVSKY'],
+    ['Cb','FABIO HENRIQUE SCHNEIDER'],['Cb','VICTOR FELLIPE DE SOUZA SANTOS'],
+    ['Cb','WESLEY KAUE ULBRICH'],['Cb','RAFAEL FERNANDES ALBINO'],
+    ['Cb','CAIKY PEREIRA FAGUNDES FERRI'],['Cb','JOSE MARCELO RATHOVSKI CARDOSO'],
+    ['Cb','HEVERTON ELIAS'],['Cb','ANDERSON BUENO DA SILVA'],
+    ['Cb','ENZO BONA MULLER'],['Cb','IGOR LUIS KOLB CORDEIRO'],
+    ['Sd EP','JOAO PAULO GONCALVES'],['Sd EP','LEANDRO LUIZ PSCHEIDT'],
+    ['Sd EP','GUSTAVO DANIEL LINZMEYER'],['Sd EP','JOAO ALBERTO MACHADO'],
+    ['Sd EP','LUCAS BUSCOSKI KOSTECKI'],['Sd EP','LUANO LISBOA DOS SANTOS'],
+    ['Sd EP','MARCOS OTAVIO MULDEMBERG'],['Sd EP','FELIPE DA SILVA'],
+    ['Sd EP','VITOR AUGUSTO HENNING'],['Sd EP','VINICIUS FLEICHMANN WEGRZINOWSKI'],
+    ['Sd EP','IGOR GABRIEL TEIXEIRA GROHS'],['Sd EP','RICHARD MULBAUER PSCHEIDT'],
+    ['Sd EP','GUILHERME AFONSO SCHELBAUER PETERS'],
+    ['Sd EP','RODRIGO DRZEVIESKI FILHO'],['Sd EP','JOAO VINICIUS VIEIRA PATRICIO']
+  ];
+  pessoas.forEach(([pt, nm]) => qAddRow(pt, nm));
+  qRecalcAll();
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+// ── GERAÇÃO DE PARECER PDF ─────────────────────────────────────────
+
+function gerarParecer(tipo) {
+  if (typeof window.jspdf === 'undefined') {
+    alert('jsPDF ainda está carregando. Aguarde e tente novamente.'); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF('p', 'mm', 'a4');
+  const W = 210, M = 14;
+  const COR = {
+    verde:  [10, 61, 46],
+    vl:     [29, 158, 117],
+    verd0:  [225, 245, 238],
+    verm:   [163, 45, 45],
+    am:     [133, 79, 11],
+    cinza:  [95, 94, 90],
+    branco: [255, 255, 255]
+  };
+  let y = 0;
+
+  // ── CABEÇALHO ──────────────────────────────────────────────────
+  doc.setFillColor(...COR.verde);
+  doc.rect(0, 0, W, 26, 'F');
+  doc.setTextColor(...COR.branco);
+  doc.setFont('helvetica', 'bold');   doc.setFontSize(13);
+  doc.text('EXÉRCITO BRASILEIRO', M, 9);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text('Sistema de Gratificação de Representação — Motor de Conformidade Legislativa', M, 15);
+  doc.text('Lei nº 13.954/2019  ·  Decreto nº 11.002/2022  ·  Port. C Ex nº 1887/2022  ·  OS 13-E4/CMS', M, 21);
+  doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, W - M, 9, { align: 'right' });
+  y = 34;
+
+  // ── TÍTULO ─────────────────────────────────────────────────────
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');   doc.setFontSize(12);
+  doc.text('PARECER DE ANÁLISE DE CONFORMIDADE', W / 2, y, { align: 'center' });
+  y += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.setTextColor(...COR.cinza);
+  doc.text('Gratificação de Representação — Verificação Legislativa Automatizada', W / 2, y, { align: 'center' });
+  y += 10;
+
+  // ──────────────────────────────────────────────────────────────
+  if (tipo === 'ocr') {
+    _pdfOCR(doc, W, M, COR, y);
+  } else if (tipo === 'individual') {
+    _pdfIndividual(doc, W, M, COR, y);
+  }
+}
+
+function _caixaResultado(doc, W, M, COR, y, resultado) {
+  const c = resultado === 'aprovado' ? COR.vl : resultado === 'reprovado' ? COR.verm : COR.am;
+  const t = resultado === 'aprovado' ? 'APROVADO - SAQUE AUTORIZADO'
+    : resultado === 'reprovado'      ? 'REPROVADO - SAQUE VEDADO'
+    :                                  'PENDENTE - COMPLEMENTAR DOCUMENTACAO';
+  doc.setFillColor(...c);
+  doc.roundedRect(M, y, W - M * 2, 11, 2, 2, 'F');
+  doc.setTextColor(...COR.branco); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text(t, W / 2, y + 7.5, { align: 'center' });
+  return y + 17;
+}
+
+function _rodape(doc, W, M, COR, y) {
+  if (y > 248) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+  doc.setTextColor(...COR.vl);
+  doc.text('FUNDAMENTACAO LEGAL', M, y); y += 4;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  doc.setTextColor(0, 0, 0);
+  [
+    'Lei n. 13.954, de 16 DEZ 2019 - Institui a GR; Anexo IV: 2% do soldo por dia.',
+    'Decreto n. 11.002/2022 - Art. 2 (ativa); Art. 4/par.1 (>=8h = 1 dia); Art. 5 (VR/VI/EO); Art. 6 (autorizacao); Art. 8 (inacumulavel c/ diarias).',
+    'Portaria C Ex n. 1887/2022 (EB10-N-08.003) - Art. 5: autorizacao previa + publicacao BI antes e apos evento + ordem de saque.',
+    'OS n. 13-E4/CMS, de 28 DEZ 2022 - Sede = municipio da OM; PTTC nao faz jus; canal de comando para solicitacao ao CMS.',
+  ].forEach(l => { doc.text(l, M, y, { maxWidth: W - M * 2 }); y += 5; });
+  y += 8;
+  if (y > 268) { doc.addPage(); y = 20; }
+  doc.setDrawColor(...COR.cinza);
+  doc.line(M, y, W / 2 - 6, y);
+  y += 4;
+  doc.setFontSize(7.5); doc.setTextColor(...COR.cinza);
+  doc.text('Oficial de Pagamento / Responsavel pela Analise', M, y);
+  doc.text(`Gerado pelo SGR - ${new Date().toLocaleString('pt-BR')}`, W - M, y, { align: 'right' });
+  return doc;
+}
+
+function _pdfOCR(doc, W, M, COR, y) {
+  const titulo = document.getElementById('ocr-res-titulo').textContent;
+  const meta   = document.getElementById('ocr-res-meta').textContent;
+  const total  = document.getElementById('ocr-res-total').textContent;
+
+  // Referência
+  doc.setTextColor(0, 0, 0); doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');   doc.text('Referencia:', M, y);
+  doc.setFont('helvetica', 'normal'); doc.text(titulo, M + 23, y); y += 5;
+  doc.setFont('helvetica', 'bold');   doc.text('Dados:', M, y);
+  doc.setFont('helvetica', 'normal'); doc.text(meta, M + 23, y);   y += 8;
+
+  // Coletar linhas da tabela OCR
+  const rows = [...document.querySelectorAll('#ocr-res-body tr')].map(tr => {
+    const c = [...tr.querySelectorAll('td')];
+    if (c.length < 7) return null;
+    return [c[0].textContent.trim(), c[1].textContent.trim(),
+            c[2].textContent.trim(), c[3].textContent.trim(),
+            c[4].textContent.trim(), c[5].textContent.trim(),
+            c[6].textContent.trim()];
+  }).filter(Boolean);
+
+  const nOk   = rows.filter(r => r[6] === 'OK').length;
+  const nRep  = rows.filter(r => r[6] !== 'OK' && r[6] !== 'Sem período' && r[6] !== 'Posto?').length;
+  const nPend = rows.length - nOk - nRep;
+  const res   = nRep > 0 ? 'reprovado' : nPend > 0 ? 'pendente' : 'aprovado';
+
+  y = _caixaResultado(doc, W, M, COR, y, res);
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0);
+  doc.text(`Total de militares: ${rows.length}  |  Aprovados: ${nOk}  |  Pendentes: ${nPend}  |  Reprovados: ${nRep}`, M, y);
+  doc.setFont('helvetica', 'bold');
+  doc.text(total, W - M, y, { align: 'right' });
+  y += 8;
+
+  doc.autoTable({
+    startY: y,
+    head: [['P/G', 'Nome', 'Soldo', 'Dias', 'GR/dia', 'Total', 'Status']],
+    body: rows,
+    styles:      { fontSize: 7.5, cellPadding: 2 },
+    headStyles:  { fillColor: COR.verde, textColor: COR.branco, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 18 }, 1: { cellWidth: 58 }, 2: { cellWidth: 26 },
+      3: { cellWidth: 12, halign: 'center' }, 4: { cellWidth: 20 },
+      5: { cellWidth: 26 }, 6: { cellWidth: 16, halign: 'center' }
+    },
+    didParseCell: d => {
+      if (d.section === 'body' && d.column.index === 6) {
+        const v = d.cell.raw;
+        d.cell.styles.textColor = v === 'OK' ? COR.vl
+          : (v === 'REPROVADO' || v === 'H < 8h') ? COR.verm : COR.am;
+        d.cell.styles.fontStyle = 'bold';
+      }
+    }
+  });
+
+  _rodape(doc, W, M, COR, doc.lastAutoTable.finalY + 10);
+  doc.save(`${titulo.replace(/[\/\\:*?"<>|]/g, '-')}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+function _pdfIndividual(doc, W, M, COR, y) {
+  if (!ultimaAnalise) { alert('Nenhuma análise individual disponível.'); return; }
+  const a = ultimaAnalise;
+
+  // Dados do requerimento
+  doc.autoTable({
+    startY: y,
+    head: [['Campo', 'Dado informado']],
+    body: [
+      ['Militar',          a.nome      || '—'],
+      ['NIP',              a.nip       || '—'],
+      ['Posto / Grad.',    a.posto     || '—'],
+      ['OM',               a.om        || '—'],
+      ['QSGR / Ref.',      a.qsgr      || '—'],
+      ['Local',            a.local     || '—'],
+      ['Evento',           (a.evento||'').substring(0, 90)],
+      ['Descricao',        (a.descricao||'').substring(0, 90)],
+      ['Tipo',             a.tipo==='vi'?'Viagem de Instrucao':a.tipo==='vr'?'Viagem de Representacao':a.tipo==='eo'?'Emprego Operacional':'—'],
+      ['Periodo',          a.ini&&a.fim ? `${a.ini.split('-').reverse().join('/')} a ${a.fim.split('-').reverse().join('/')}` : '—'],
+      ['Dias',             String(a.dias||'—')],
+      ['Carga horaria',    a.horas ? `${a.horas}h/dia` : '—'],
+      ['Soldo (Jan/2026)', a.soldo ? `R$ ${a.soldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—'],
+    ],
+    styles:      { fontSize: 8, cellPadding: 2 },
+    headStyles:  { fillColor: [40, 40, 40], textColor: COR.branco },
+    columnStyles:{ 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 146 } },
+    margin: { left: M, right: M }
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  y = _caixaResultado(doc, W, M, COR, y,
+    a.status === 'aprov' ? 'aprovado' : a.status === 'reprov' ? 'reprovado' : 'pendente');
+
+  // Checklist de critérios
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
+  doc.text('VERIFICACAO DE CRITERIOS LEGAIS', M, y); y += 4;
+
+  doc.autoTable({
+    startY: y,
+    head: [['', 'Criterio verificado', 'Fundamentacao legal']],
+    body: (a.criterios || []).map(c => [
+      c.ok === true ? 'OK' : c.ok === false ? 'FAIL' : 'PEND',
+      c.txt || '', c.lei || ''
+    ]),
+    styles:      { fontSize: 7.5, cellPadding: 2 },
+    headStyles:  { fillColor: [40, 40, 40], textColor: COR.branco },
+    columnStyles:{
+      0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 112 },
+      2: { cellWidth: 58, fontSize: 7, textColor: COR.cinza }
+    },
+    didParseCell: d => {
+      if (d.section === 'body' && d.column.index === 0) {
+        d.cell.styles.textColor = d.cell.raw === 'OK' ? COR.vl
+          : d.cell.raw === 'FAIL' ? COR.verm : COR.am;
+        d.cell.styles.fontStyle = 'bold';
+      }
+    },
+    margin: { left: M, right: M }
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // Memória de cálculo (se aprovado)
+  if (a.status === 'aprov' && a.soldo && a.dias) {
+    if (y > 238) { doc.addPage(); y = 20; }
+    doc.setFillColor(...COR.verd0);
+    doc.roundedRect(M, y, W - M * 2, 30, 2, 2, 'F');
+    doc.setTextColor(...COR.verde); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.text('MEMORIA DE CALCULO', M + 4, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+    doc.text(`Soldo mensal (Tabela Jan/2026): R$ ${a.soldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, M + 4, y + 13);
+    doc.text(`Percentual diario (Anexo IV, Lei 13.954/19): 2%`, M + 4, y + 19);
+    doc.text(`GR por dia: R$ ${(a.soldo*0.02).toFixed(2)}  x  ${a.dias} dia(s)`, M + 4, y + 25);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...COR.verde);
+    doc.text(`VALOR TOTAL: R$ ${a.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, W - M, y + 25, { align: 'right' });
+    y += 36;
+  }
+
+  _rodape(doc, W, M, COR, y);
+  const nm = (a.nome || 'analise').replace(/\s+/g, '_').substring(0, 30);
+  doc.save(`Parecer_GR_${nm}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ── EXTRAÇÃO DE PERÍODO ────────────────────────────────────────────
+
+const MESES_PT = {
+  JAN:1,FEV:2,MAR:3,ABR:4,MAI:5,JUN:6,
+  JUL:7,AGO:8,SET:9,OUT:10,NOV:11,DEZ:12,
+  // variações de OCR
+  'ABR':4,'MAR':3,'MAI':5,'FEV':2,'OUT':10,'NOV':11,'DEZ':12,
+  'JAN':1,'JUN':6,'JUL':7,'AGO':8,'SET':9
+};
+
+function gdhParaISO(gdh) {
+  // "090500ABR26" | "09ABR26" | "090000ABR26"
+  const m = gdh.toUpperCase().match(/^(\d{2})\d*([A-Z]{3})(\d{2})$/);
+  if (!m) return null;
+  const mes = MESES_PT[m[2]];
+  if (!mes) return null;
+  return `20${m[3]}-${String(mes).padStart(2,'0')}-${m[1]}`;
+}
+
+function extrairPeriodo(texto) {
+  const txt = texto.replace(/\n/g,' ');
+
+  // 1) GDH par: "09000ABR26 a 101730ABR26"
+  let m = txt.match(/(\d{2}\d{0,4}[A-Z]{3}\d{2})\s+a\s+(\d{2}\d{0,4}[A-Z]{3}\d{2})/i);
+  if (m) {
+    const ini = gdhParaISO(m[1]); const fim = gdhParaISO(m[2]);
+    if (ini && fim) return { ini, fim, fonte: 'GDH' };
+  }
+
+  // 2) BI: "em 090500ABR26" ... "retornou em 101730ABR26"
+  const mIni = txt.match(/\bem\s+(\d{2}\d{0,4}[A-Z]{3}\d{2})/i);
+  const mFim = txt.match(/\b(?:retornou|chegou|regressou|retorno)\s+em\s+(\d{2}\d{0,4}[A-Z]{3}\d{2})/i);
+  if (mIni && mFim) {
+    const ini = gdhParaISO(mIni[1]); const fim = gdhParaISO(mFim[1]);
+    if (ini && fim) return { ini, fim, fonte: 'BI' };
+  }
+
+  // 3) Padrão DD/MM/YY(YY) a DD/MM/YY(YY)
+  m = txt.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})\s+a\s+(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/);
+  if (m) {
+    const y1 = m[3].length===2 ? '20'+m[3] : m[3];
+    const y2 = m[6].length===2 ? '20'+m[6] : m[6];
+    return { ini:`${y1}-${m[2]}-${m[1]}`, fim:`${y2}-${m[5]}-${m[4]}`, fonte:'data' };
+  }
+
+  // 4) "PERIODO" + datas
+  m = txt.match(/[Pp][Ee][Rr][Ii][Oo][Dd][Oo].*?(\d{2}[\/\-]\d{2}[\/\-]\d{2,4}).*?a.*?(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})/);
+  if (m) {
+    const parse = s => { const [d,mo,y]=s.split(/[\/\-]/); const yr=y.length===2?'20'+y:y; return `${yr}-${mo}-${d}`; };
+    return { ini: parse(m[1]), fim: parse(m[2]), fonte: 'label' };
+  }
+
+  // 5) GDH simples isolado: tenta pegar dois consecutivos de meses iguais
+  const all = [...txt.matchAll(/\b(\d{2}\d{0,4}[A-Z]{3}\d{2})\b/gi)];
+  if (all.length >= 2) {
+    const ini = gdhParaISO(all[0][1]); const fim = gdhParaISO(all[all.length-1][1]);
+    if (ini && fim && ini !== fim) return { ini, fim, fonte: 'GDH-inf' };
+  }
+
+  return null;
+}
+
+// ── OCR ENGINE ─────────────────────────────────────────────────────
+
+function ocrProgress(lbl, pct, det) {
+  const p = document.getElementById('ocr-prog');
+  p.style.display = 'block';
+  document.getElementById('ocr-lbl').textContent  = lbl;
+  document.getElementById('ocr-fill').style.width = pct + '%';
+  document.getElementById('ocr-det').textContent  = det || '';
+}
+
+function limparOCR() {
+  document.getElementById('dash-paste').value = '';
+  document.getElementById('ocr-result-wrap').style.display = 'none';
+  document.getElementById('ocr-prog').style.display = 'none';
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  // Limpa datas para garantir auto-extração do documento
+  document.getElementById('ocr-ini').value = '';
+  document.getElementById('ocr-fim').value = '';
+  limparOCR();
+  ocrProgress('Lendo arquivo...', 5, file.name);
+
+  try {
+    let texto = '';
+
+    if (file.type === 'application/pdf') {
+      if (typeof pdfjsLib === 'undefined') {
+        alert('PDF.js ainda carregando — aguarde um instante e tente novamente.');
+        return;
+      }
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      const ab  = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const basePct = Math.round((i - 1) / pdf.numPages * 80);
+        ocrProgress(`Processando página ${i} / ${pdf.numPages}`, basePct + 5, '');
+        const page = await pdf.getPage(i);
+
+        // Extrai texto nativo reconstruindo linhas por coordenada Y
+        const tc = await page.getTextContent();
+        const linhaMap = {};
+        tc.items.forEach(item => {
+          const y = Math.round(item.transform[5] / 3) * 3;
+          if (!linhaMap[y]) linhaMap[y] = [];
+          linhaMap[y].push({ x: item.transform[4], str: item.str });
+        });
+        const sortedY = Object.keys(linhaMap).map(Number).sort((a, b) => b - a);
+        const camada = sortedY
+          .map(y => linhaMap[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ').trim())
+          .filter(l => l.length > 0)
+          .join('\n');
+
+        if (camada.length > 40) {
+          texto += camada + '\n';
+        } else {
+          // Página escaneada → renderiza e faz OCR
+          ocrProgress(`OCR — página ${i} / ${pdf.numPages}`, basePct + 5,
+            'Reconhecendo texto (pode levar alguns segundos)...');
+          const scale = 2.2;
+          const vp = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width  = vp.width;
+          canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+          const { data: { text } } = await Tesseract.recognize(canvas, 'por', {
+            logger: m => { if (m.status === 'recognizing text')
+              ocrProgress(`OCR — página ${i} / ${pdf.numPages}`,
+                basePct + Math.round(m.progress * 30), 'Reconhecendo...'); }
+          });
+          texto += text + '\n';
+        }
+      }
+    } else {
+      // Imagem direta
+      ocrProgress('Reconhecendo texto na imagem...', 20, file.name);
+      const { data: { text } } = await Tesseract.recognize(file, 'por', {
+        logger: m => { if (m.status === 'recognizing text')
+          ocrProgress('OCR em andamento...', 10 + Math.round(m.progress * 85), ''); }
+      });
+      texto = text;
+    }
+
+    ocrProgress('Analisando dados extraídos...', 98, '');
+    document.getElementById('dash-paste').value = texto.trim();
+    analisarTexto(texto);
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao processar: ' + err.message);
+  } finally {
+    document.getElementById('ocr-prog').style.display = 'none';
+    document.getElementById('ocr-file').value = '';
+  }
+}
+
+function analisarTexto(texto) {
+  if (!texto.trim()) return;
+
+  // ── Extrair período automaticamente do documento ─────────────
+  let ini   = document.getElementById('ocr-ini').value;
+  let fim   = document.getElementById('ocr-fim').value;
+  const horas = parseFloat(document.getElementById('ocr-horas').value) || 10;
+  let periodoFonte = null;
+
+  if (!ini || !fim) {
+    const p = extrairPeriodo(texto);
+    if (p) {
+      ini = p.ini;
+      fim = p.fim;
+      periodoFonte = p.fonte;
+      document.getElementById('ocr-ini').value = ini;
+      document.getElementById('ocr-fim').value = fim;
+    }
+  }
+
+  const dIni  = ini ? new Date(ini) : null;
+  const dFim  = fim ? new Date(fim) : null;
+  const dias  = (dIni && dFim && dFim >= dIni)
+    ? Math.round((dFim - dIni) / (1000 * 60 * 60 * 24)) + 1 : 0;
+
+  // ── Extrair metadados do QSGR ────────────────────────────────
+  const qM   = texto.match(/QSGR\s+(\d+)[\/\\](\d+)\s*[—–\-]\s*([A-Za-zÀ-ú0-9º°ª ]{2,20})/i);
+  const locM  = texto.match(/\b([A-ZÁÉÍÓÚ][a-záéíóú]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/);
+  const totM  = texto.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
+
+  // ── Extrair pessoas ──────────────────────────────────────────
+  // Estratégia: o posto pode estar em qualquer posição da linha
+  // (QSGR: "5ºRCC 1 PONTA GROSSA PR Cap LUCAS RODRIGUES ALVES 09000ABR26 ...")
+  // O nome é tudo após o posto até o primeiro dígito ou fim de linha.
+  const pessoas = [];
+  for (const linha of texto.split(/\r?\n/)) {
+    const l = linha.trim();
+    if (l.length < 5) continue;
+    for (const [pat, key] of RANK_PATTERNS) {
+      const re = new RegExp(
+        `(?:^|\\s)(${pat})\\s+([A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç][A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç ]{4,55})`,
+        'i');
+      const m = l.match(re);
+      if (m) {
+        const nome = m[2].trim().replace(/\s{2,}/g, ' ').toUpperCase();
+        if (nome.length > 4 && !pessoas.some(p => p.nome === nome))
+          pessoas.push({ posto: key, nome });
+        break;
+      }
+    }
+  }
+
+  // ── Análise de inconsistências legais ────────────────────────
+  const txtUp  = texto.toUpperCase();
+  const temAdtAdm   = /ADT\s*ADM|ADITAMENTO\s+ADMINISTRATIVO/i.test(texto);
+  const temPreAuth  = /PR[EÉ]-?AUTORIZA[CÇ][ÃA]O|BOL\s*CMS/i.test(texto);
+  const bolRefM     = texto.match(/Adt\s+Adm\s+n[º°o]\s*\d+[^.\n]{0,70}/i);
+  const bolRef      = bolRefM ? bolRefM[0].trim() : '';
+  const temBI       = /BOLE?T[IÍ]M\s+INTERNO|BI\s+N[rRºo°]/i.test(texto);
+  const temPTTC     = /\bPTTC\b/i.test(texto);
+  const temDiaria   = /DI[ÁA]RIA/i.test(texto);
+
+  let eventoDetectado = '';
+  for (const ev of EVENTOS) {
+    const palavras = ev.split(' ').filter(w => w.length > 5).slice(0, 3);
+    if (palavras.length && palavras.every(w => txtUp.includes(w.toUpperCase()))) {
+      eventoDetectado = ev; break;
+    }
+  }
+
+  const criteriosOCR = [
+    {
+      ok: dias > 0,
+      txt: dias > 0
+        ? `Período detectado automaticamente: ${ini ? ini.split('-').reverse().join('/') : '?'} a ${fim ? fim.split('-').reverse().join('/') : '?'} (${dias} dia(s))${periodoFonte ? ' — fonte: ' + periodoFonte : ''}`
+        : 'Período NÃO detectado no documento — não foi possível calcular o valor da GR',
+      lei: 'Decreto 11.002/22, art. 4º, §1º'
+    },
+    {
+      ok: horas >= 8,
+      txt: `Carga horária considerada: ${horas}h/dia — ${horas >= 8 ? 'atende ao mínimo de 8h por dia' : 'INSUFICIENTE — mínimo é 8h para cômputo de 1 dia'}`,
+      lei: 'Decreto 11.002/22, art. 4º, §1º'
+    },
+    {
+      ok: eventoDetectado ? true : null,
+      txt: eventoDetectado
+        ? `Evento localizado na lista de pré-autorizações do CMS: "${eventoDetectado.substring(0, 80)}"`
+        : 'Evento NÃO identificado automaticamente na lista de pré-autorizações — verificar se consta no Adt Adm vigente',
+      lei: 'Adt Adm CMS nº 06 e 07/2026'
+    },
+    {
+      ok: (temAdtAdm || temPreAuth) ? true : null,
+      txt: (temAdtAdm || temPreAuth)
+        ? `Referência de autorização detectada no documento${bolRef ? ': ' + bolRef : ''}`
+        : 'Referência de Adt Adm / Boletim CMS NÃO localizada no texto — verificar publicação',
+      lei: 'Decreto 11.002/22, art. 6º; OS 13-E4/CMS, An B'
+    },
+    {
+      ok: temBI ? true : null,
+      txt: temBI
+        ? 'Boletim Interno da OM detectado no documento'
+        : 'BI da OM pós-evento NÃO identificado no texto — publicação obrigatória antes do saque',
+      lei: 'EB10-N-08.003, art. 5º, III'
+    },
+    {
+      ok: !temDiaria,
+      txt: temDiaria
+        ? 'ATENÇÃO: Menção a "diária" detectada — verificar acumulação vedada com GR'
+        : 'Não há menção a diárias no documento (vedação de acumulação não identificada)',
+      lei: 'Decreto 11.002/22, art. 8º'
+    },
+    {
+      ok: temPTTC ? false : true,
+      txt: temPTTC
+        ? 'ATENÇÃO: Menção a PTTC detectada — militares nessa situação NÃO fazem jus à GR'
+        : 'Não há menção a PTTC no documento',
+      lei: 'Decreto 11.002/22, art. 2º; OS 13-E4/CMS'
+    },
+  ];
+
+  const chkOCRHtml = criteriosOCR.map(c => {
+    const ico = c.ok === true ? '✓' : c.ok === false ? '✗' : '⚠';
+    const cls = c.ok === true ? 'ic-ok' : c.ok === false ? 'ic-err' : 'ic-warn';
+    return `<li style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:12px;align-items:flex-start">
+      <div class="chk-icon ${cls}" style="flex-shrink:0">${ico}</div>
+      <div><span>${c.txt}</span><span class="chk-lei">${c.lei}</span></div>
+    </li>`;
+  }).join('');
+
+  const critDiv = document.getElementById('ocr-criterios');
+  critDiv.style.display = 'block';
+  critDiv.innerHTML = `
+    <div style="font-size:11px;font-weight:600;color:var(--verde);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">
+      Verificação de Critérios Legais
+    </div>
+    <ul style="list-style:none;margin:0;padding:0">${chkOCRHtml}</ul>`;
+
+  // ── Montar tabela ────────────────────────────────────────────
+  let totalValor = 0;
+  let nOk = 0;
+  const linhas = pessoas.map(p => {
+    const soldo = SOLDOS[p.posto] || 0;
+    const grd   = +(soldo * 0.02).toFixed(2);
+    const tot   = +(grd * dias).toFixed(2);
+    totalValor += tot;
+    const ok = soldo > 0 && dias > 0 && horas >= 8;
+    if (ok) nOk++;
+    const bc = ok ? 'b-ok'
+      : (!dias || !soldo) ? 'b-warn' : 'b-err';
+    const bl = ok ? 'OK'
+      : !dias  ? 'Sem período'
+      : !soldo ? 'Posto?'
+      : 'H < 8h';
+    return `<tr>
+      <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${p.posto}</td>
+      <td style="font-weight:500">${p.nome}</td>
+      <td style="font-family:var(--mono);font-size:11px">R$ ${(soldo||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td style="text-align:center;font-family:var(--mono)">${dias || '—'}</td>
+      <td style="font-family:var(--mono)">R$ ${grd.toFixed(2)}</td>
+      <td style="font-family:var(--mono);font-weight:700">R$ ${tot.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td><span class="badge ${bc}">${bl}</span></td>
+    </tr>`;
+  }).join('');
+
+  // ── Exibir resultado ─────────────────────────────────────────
+  document.getElementById('ocr-res-body').innerHTML = linhas ||
+    `<tr><td colspan="7" style="text-align:center;padding:22px;color:var(--cinza-3)">
+      Nenhuma pessoa identificada. Verifique a qualidade do OCR ou o formato do documento.
+    </td></tr>`;
+
+  document.getElementById('ocr-res-titulo').textContent = qM
+    ? `QSGR ${qM[1]}/${qM[2]} — ${qM[3].trim()}` : 'Resultado da Análise';
+
+  const fonteLabel = { 'GDH':'GDH', 'BI':'BI', 'data':'data', 'label':'PERIODO', 'GDH-inf':'GDH' };
+  const periodoStr = ini && fim
+    ? `${ini.split('-').reverse().join('/')} a ${fim.split('-').reverse().join('/')}${periodoFonte ? ` (auto: ${fonteLabel[periodoFonte]||periodoFonte})` : ''}`
+    : null;
+
+  document.getElementById('ocr-res-meta').textContent = [
+    `${pessoas.length} militar(es) identificado(s)`,
+    locM  ? locM[0] : null,
+    dias  ? `${dias} dia(s)` : null,
+    periodoStr
+  ].filter(Boolean).join(' · ');
+
+  document.getElementById('ocr-res-total').textContent =
+    totalValor > 0 ? `R$ ${totalValor.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+
+  document.getElementById('ocr-res-subtotal').textContent =
+    pessoas.length ? `${nOk}/${pessoas.length} OK` : '';
+
+  const aviso = document.getElementById('ocr-res-aviso');
+  const avisos = [];
+  if (totM) {
+    const totDoc = parseFloat(totM[1].replace(/\./g,'').replace(',','.'));
+    const diff   = Math.abs(totDoc - totalValor);
+    if (diff > 0.1)
+      avisos.push(`⚠ Total calculado (R$ ${totalValor.toLocaleString('pt-BR',{minimumFractionDigits:2})}) difere do documento (R$ ${totDoc.toLocaleString('pt-BR',{minimumFractionDigits:2})}). Verifique o período ou os soldos.`);
+  }
+  if (!dias) avisos.push('⚠ Período não detectado automaticamente — informe as datas de início e fim nos campos acima e clique em Analisar novamente.');
+  aviso.style.display = avisos.length ? 'block' : 'none';
+  aviso.innerHTML = avisos.join('<br>');
+
+  document.getElementById('ocr-result-wrap').style.display = 'block';
+  document.getElementById('ocr-result-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
