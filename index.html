@@ -1724,48 +1724,58 @@ function analisarTexto(texto) {
   const totM  = texto.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
 
   // ── Isolar seção da tabela QSGR para extração de nomes ───────
-  // Estratégia em camadas:
-  // 1) Separador explícito <<INICIO_BI>> (PDFs com pgs escaneadas + digitais)
-  // 2) Limites pelo conteúdo: "QUADRO DE SOLICITAÇÃO" → "TOTAL R$ x"
-  // 3) Marcador do BI: "(Continuação do BI" ou "Em consequência"
   const sepBI = texto.indexOf('<<INICIO_BI>>');
+
+  // fimQSGR: "TOTAL" apenas quando aparece no início de linha (rodapé da tabela)
+  // Evita falso positivo em "VALOR TOTAL" no meio de uma linha
+  const fimQSGR = texto.search(/(?:^|[\r\n])\s*TOTAL\s+R\$\s*[\d.,]+/im);
+
   let textoNomes;
-
   if (sepBI > 0) {
-    // Caso ideal: páginas QSGR (OCR) separadas das páginas BI (digitais)
-    textoNomes = texto.substring(0, sepBI);
+    textoNomes = texto.substring(0, sepBI);                              // (1) separador explícito
   } else {
-    // Tenta delimitar pela tabela QSGR
     const inicioQSGR = texto.search(/QUADRO\s+DE\s+SOLICITA[ÇC][AÃO]O|QSGR\s+\d+[\/\\]\d+/i);
-    const fimQSGR    = texto.search(/\bTOTAL\b[\s:]+R\$\s*[\d.,]+/i);
-
     if (inicioQSGR >= 0 && fimQSGR > inicioQSGR) {
-      // Extrai somente o interior da tabela
-      textoNomes = texto.substring(inicioQSGR, fimQSGR + 80);
+      textoNomes = texto.substring(inicioQSGR, fimQSGR + 100);          // (2) limites do conteúdo
     } else {
-      // Fallback: corta no início do BI
       const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
-      textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;
+      textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;      // (3) marcador do BI
     }
   }
 
-  // ── Extrair pessoas ──────────────────────────────────────────
-  const pessoas = [];
-  for (const linha of textoNomes.split(/\r?\n/)) {
-    const l = linha.trim();
-    if (l.length < 5) continue;
-    for (const [pat, key] of RANK_PATTERNS) {
-      const re = new RegExp(
-        `(?:^|\\s)(${pat})\\s+([A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç][A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç ]{4,55})`,
-        'i');
-      const m = l.match(re);
-      if (m) {
-        const nome = m[2].trim().replace(/\s{2,}/g, ' ').toUpperCase();
-        if (nome.length > 4 && !pessoas.some(p => p.nome === nome))
-          pessoas.push({ posto: key, nome });
-        break;
+  // Helper reutilizável de extração
+  function extrairPessoasDeTexto(src) {
+    const lista = [];
+    for (const linha of src.split(/\r?\n/)) {
+      const l = linha.trim();
+      if (l.length < 5) continue;
+      for (const [pat, key] of RANK_PATTERNS) {
+        const re = new RegExp(
+          `(?:^|\\s)(${pat})\\s+([A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç][A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç ]{4,55})`,
+          'i');
+        const m = l.match(re);
+        if (m) {
+          const nome = m[2].trim().replace(/\s{2,}/g, ' ').toUpperCase();
+          if (nome.length > 4 && !lista.some(p => p.nome === nome))
+            lista.push({ posto: key, nome });
+          break;
+        }
       }
     }
+    return lista;
+  }
+
+  // ── Extrair pessoas (com fallback progressivo se 0 encontrados) ─
+  let pessoas = extrairPessoasDeTexto(textoNomes);
+
+  if (pessoas.length === 0 && sepBI > 0) {
+    // Seção QSGR (OCR) não produziu nomes → tenta no texto completo pré-BI
+    pessoas = extrairPessoasDeTexto(texto.substring(0, sepBI + 200));
+  }
+  if (pessoas.length === 0) {
+    // Último recurso: texto até o marcador BI ou 1º "Em consequência"
+    const limite = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
+    pessoas = extrairPessoasDeTexto(limite > 80 ? texto.substring(0, limite) : texto);
   }
 
   // ── Análise de inconsistências legais ────────────────────────
