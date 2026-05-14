@@ -1687,31 +1687,48 @@ async function handleFile(file) {
 function analisarTexto(texto) {
   if (!texto.trim()) return;
 
-  // ── Extrair período automaticamente do documento ─────────────
+  const horas = parseFloat(document.getElementById('ocr-horas').value) || 10;
+
+  // ── 1) ISOLAR SEÇÃO DA QSGR (executado ANTES da metadata) ────
+  // Garante que metadata (período, local, total) seja extraída da QSGR
+  // alvo, não de outras seções do documento (BI, outras QSGRs, etc).
+  const sepBI = texto.indexOf('<<INICIO_BI>>');
+  const fimQSGR = texto.search(/(?:^|[\r\n])\s*TOTAL\s+R\$\s*[\d.,]+/im);
+
+  let textoNomes;
+  if (sepBI > 0) {
+    textoNomes = texto.substring(0, sepBI);
+  } else {
+    const inicioQSGR = texto.search(/QUADRO\s+DE\s+SOLICITA[ÇC][AÃO]O|QSGR\s+\d+[\/\\]\d+/i);
+    if (inicioQSGR >= 0 && fimQSGR > inicioQSGR) {
+      textoNomes = texto.substring(inicioQSGR, fimQSGR + 100);
+    } else {
+      const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
+      textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;
+    }
+  }
+
+  // ── 2) METADATA: preferir textoNomes, fallback para texto completo ──
+  // Período (data + hora GDH) — prioriza a seção QSGR isolada
   let ini   = document.getElementById('ocr-ini').value;
   let fim   = document.getElementById('ocr-fim').value;
-  const horas = parseFloat(document.getElementById('ocr-horas').value) || 10;
   let periodoFonte = null;
   let gdhHoras = null;
 
   if (!ini || !fim) {
-    const p = extrairPeriodo(texto);
+    const p = extrairPeriodo(textoNomes) || extrairPeriodo(texto);
     if (p) {
-      ini = p.ini;
-      fim = p.fim;
-      periodoFonte = p.fonte;
+      ini = p.ini; fim = p.fim; periodoFonte = p.fonte;
       if (p.horaIni && p.horaFim) gdhHoras = { ini: p.horaIni, fim: p.horaFim };
       document.getElementById('ocr-ini').value = ini;
       document.getElementById('ocr-fim').value = fim;
     }
   }
 
-  // Extrai TOTAL DIAS declarado no documento
-  const totalDiasDocM = texto.match(/TOTAL\s*DIAS[:\s]+(\d+)/i)
-    || texto.match(/\d{2}\d{0,4}[A-Z]{3}\d{2}\s+a\s+\d{2}\d{0,4}[A-Z]{3}\d{2}\s+(\d+)/i);
+  const totalDiasDocM = textoNomes.match(/TOTAL\s*DIAS[:\s]+(\d+)/i)
+    || textoNomes.match(/\d{2}\d{0,4}[A-Z]{3}\d{2}\s+a\s+\d{2}\d{0,4}[A-Z]{3}\d{2}\s+(\d+)/i);
   const diasDocumento = totalDiasDocM ? parseInt(totalDiasDocM[1]) : null;
 
-  // Análise GDH hora a hora (quando horários disponíveis)
   const gdhAnalise = (gdhHoras && ini && fim)
     ? calcularDiasGDH(ini, fim, gdhHoras.ini, gdhHoras.fim) : null;
 
@@ -1720,30 +1737,12 @@ function analisarTexto(texto) {
   const dias  = (dIni && dFim && dFim >= dIni)
     ? Math.round((dFim - dIni) / (1000 * 60 * 60 * 24)) + 1 : 0;
 
-  // ── Extrair metadados do QSGR ────────────────────────────────
-  const qM   = texto.match(/QSGR\s+(\d+)[\/\\](\d+)\s*[—–\-]\s*([A-Za-zÀ-ú0-9º°ª ]{2,20})/i);
-  const locM  = texto.match(/\b([A-ZÁÉÍÓÚ][a-záéíóú]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/);
-  const totM  = texto.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
-
-  // ── Isolar seção da tabela QSGR para extração de nomes ───────
-  const sepBI = texto.indexOf('<<INICIO_BI>>');
-
-  // fimQSGR: "TOTAL" apenas quando aparece no início de linha (rodapé da tabela)
-  // Evita falso positivo em "VALOR TOTAL" no meio de uma linha
-  const fimQSGR = texto.search(/(?:^|[\r\n])\s*TOTAL\s+R\$\s*[\d.,]+/im);
-
-  let textoNomes;
-  if (sepBI > 0) {
-    textoNomes = texto.substring(0, sepBI);                              // (1) separador explícito
-  } else {
-    const inicioQSGR = texto.search(/QUADRO\s+DE\s+SOLICITA[ÇC][AÃO]O|QSGR\s+\d+[\/\\]\d+/i);
-    if (inicioQSGR >= 0 && fimQSGR > inicioQSGR) {
-      textoNomes = texto.substring(inicioQSGR, fimQSGR + 100);          // (2) limites do conteúdo
-    } else {
-      const biIdx = texto.search(/\(Continua[çc][aã]o\s+do\s+BI|\bEm\s+consequ[eê]ncia\b/i);
-      textoNomes = biIdx > 80 ? texto.substring(0, biIdx) : texto;      // (3) marcador do BI
-    }
-  }
+  // Demais metadados — também priorizam textoNomes
+  const qM  = (textoNomes.match(/QSGR\s+(\d+)[\/\\](\d+)\s*[—–\-]\s*([A-Za-zÀ-ú0-9º°ª ]{2,20})/i))
+           || texto.match(/QSGR\s+(\d+)[\/\\](\d+)\s*[—–\-]\s*([A-Za-zÀ-ú0-9º°ª ]{2,20})/i);
+  const locM = textoNomes.match(/\b([A-ZÁÉÍÓÚ][A-Za-záéíóú]+(?:[ -][A-Za-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/)
+            || texto.match(/\b([A-ZÁÉÍÓÚ][A-Za-záéíóú]+(?:[ -][A-Za-záéíóú]+)*)\s*[\/\-]\s*([A-Z]{2})\b/);
+  const totM = textoNomes.match(/TOTAL\b[:\s]+R\$\s*([\d.,]+)/i);
 
   // Helper reutilizável de extração
   function extrairPessoasDeTexto(src) {
