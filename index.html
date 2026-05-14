@@ -926,14 +926,15 @@ function qProcessAll() {
   document.querySelectorAll('#q-body tr').forEach(tr => qRecalcRow(tr.querySelector('select')));
 }
 
+// [°ºoO0.'] cobre variações de OCR do sinal ordinal: °, º, o, O, 0, ponto, apóstrofo
 const RANK_PATTERNS = [
   ['Mar','Mar'],
   ['Gen\\s*Ex','Gen Ex'],['Gen\\s*Div','Gen Div'],['Gen\\s*Bda','Gen Bda'],
   ['Ten\\s*Cel','Ten Cel'],['Cel','Cel'],
   ['Maj','Maj'],['Cap','Cap'],
-  ['1[°º]?\\s*Ten','1 Ten'],['2[°º]?\\s*Ten','2 Ten'],
+  ["1[°ºoO0.']*\\s*Ten",'1 Ten'],["2[°ºoO0.']*\\s*Ten",'2 Ten'],
   ['Asp\\s*Of','Asp Of'],['Sub\\s*Ten','Sub Ten'],
-  ['1[°º]?\\s*Sgt','1 Sgt'],['2[°º]?\\s*Sgt','2 Sgt'],['3[°º]?\\s*Sgt','3 Sgt'],
+  ["1[°ºoO0.']*\\s*Sgt",'1 Sgt'],["2[°ºoO0.']*\\s*Sgt",'2 Sgt'],["3[°ºoO0.']*\\s*Sgt",'3 Sgt'],
   ['Cb\\s*EV','Cb EV'],['Cb\\s*EP','Cb'],['Cb','Cb'],
   ['Sd\\s*EP','Sd EP'],['Sd\\s*Pqdt','Sd Pqdt'],['Sd\\s*EV','Sd EV']
 ];
@@ -1505,15 +1506,16 @@ function gdhParaISO(gdh) {
 function extrairPeriodo(texto) {
   const txt = texto.replace(/\n/g,' ');
 
-  // 1) GDH par: "261500ABR26 a 301100ABR26"
-  let m = txt.match(/(\d{2}\d{0,4}[A-Z]{3}\d{2})\s+a\s+(\d{2}\d{0,4}[A-Z]{3}\d{2})/i);
-  if (m) {
-    const ini = gdhParaISO(m[1]); const fim = gdhParaISO(m[2]);
-    if (ini && fim) {
+  // (1) GDH par com hora: "261500ABR26 a 301100ABR26"
+  const m_ = txt.match(/\b(\d{6,8})[A-Z]{3}\d{2}\s+a\s+(\d{6,8})[A-Z]{3}\d{2}\b/);
+  if (m_) {
+    const ini_ = gdhParaISO(m_[1].substring(m_[1].length - 6) + m_[0].match(/\d{6,8}([A-Z]{3}\d{2})/)[1]);
+    const fim_ = gdhParaISO(m_[2].substring(m_[2].length - 6) + m_[0].match(/a\s+\d{6,8}([A-Z]{3}\d{2})/)[1]);
+    if (ini_ && fim_) {
       // Extrai horários do GDH (ex: "261500ABR26" → "1500", "09000ABR26" → "0900")
-      const tIni = m[1].replace(/[A-Za-z]{3}\d{2}$/, '').slice(2).padEnd(4,'0').slice(0,4);
-      const tFim = m[2].replace(/[A-Za-z]{3}\d{2}$/, '').slice(2).padEnd(4,'0').slice(0,4);
-      return { ini, fim, fonte: 'GDH', horaIni: tIni, horaFim: tFim };
+      const tIni = m_[1].replace(/[A-Za-z]{3}\d{2}$/, '').padEnd(6,'0').slice(-4)
+      const tFim = m_[2].replace(/[A-Za-z]{3}\d{2}$/, '').padEnd(6,'0').slice(-4)
+      return { ini: ini_, fim: fim_, fonte: 'GDH', horaIni: tIni, horaFim: tFim };
     }
   }
 
@@ -1746,18 +1748,33 @@ function analisarTexto(texto) {
   // Helper reutilizável de extração
   function extrairPessoasDeTexto(src) {
     const lista = [];
-    for (const linha of src.split(/\r?\n/)) {
-      const l = linha.trim();
-      if (l.length < 5) continue;
+    const linhas = src.split(/\r?\n/);
+
+    function adicionarSe(key, raw) {
+      const nome = raw.trim().replace(/\s{2,}/g, ' ').toUpperCase();
+      if (nome.length > 4 && /[A-Z]/.test(nome) && !lista.some(p => p.nome === nome))
+        lista.push({ posto: key, nome });
+    }
+
+    for (let i = 0; i < linhas.length; i++) {
+      const l = linhas[i].trim();
+      if (l.length < 3) continue;
+
       for (const [pat, key] of RANK_PATTERNS) {
-        const re = new RegExp(
-          `(?:^|\\s)(${pat})\\s+([A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç][A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç ]{4,55})`,
-          'i');
-        const m = l.match(re);
-        if (m) {
-          const nome = m[2].trim().replace(/\s{2,}/g, ' ').toUpperCase();
-          if (nome.length > 4 && !lista.some(p => p.nome === nome))
-            lista.push({ posto: key, nome });
+        // Caso 1: posto + nome na mesma linha
+        const reMesma = new RegExp(
+          `(?:^|\\s)(${pat})\\s+([A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç][A-ZÁÉÍÓÚÂÊÔÃÕÜÇa-záéíóúâêôãõüç ]{4,55})`, 'i');
+        const m1 = l.match(reMesma);
+        if (m1) { adicionarSe(key, m1[2]); break; }
+
+        // Caso 2: posto isolado → nome pode estar nas próximas linhas (tabela PDF)
+        const reIsolado = new RegExp(`^(${pat})\\s*$`, 'i');
+        if (reIsolado.test(l)) {
+          for (let j = i + 1; j <= Math.min(i + 3, linhas.length - 1); j++) {
+            const prox = linhas[j].trim();
+            const mNome = prox.match(/^([A-ZÁÉÍÓÚÂÊÔÃÕÜÇ][A-ZÁÉÍÓÚÂÊÔÃÕÜÇ ]{4,55})(?=\s*(?:\d|R\$|$))/);
+            if (mNome) { adicionarSe(key, mNome[1]); break; }
+          }
           break;
         }
       }
